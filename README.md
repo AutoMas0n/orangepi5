@@ -1,9 +1,15 @@
+- [Orange pi 5 Media Box](#orange-pi-5-media-box)
+  - [initial setup](#initial-setup)
+    - [Delete partitions](#delete-partitions)
+    - [Get image into Downloads to flash nvme](#get-image-into-downloads-to-flash-nvme)
+    - [UPDATE AND RECONFIGURE AFTER MIGRATION](#update-and-reconfigure-after-migration)
+    - [Benchmark](#benchmark)
+
 # Orange pi 5 Media Box
 
 ## initial setup
 ```bash
 ifconfig
-orangepi-config
 sudo apt update && sudo apt upgrade -y
 fdisk -l
 sudo gdisk /dev/mtdblock0 #Hit `p`
@@ -64,4 +70,29 @@ cd /home/orangepi/Downloads
 ls -lah
 sudo dd bs=1M if=Orangepi5_1.1.6_ubuntu_jammy_server_linux5.10.110.img of=/dev/nvme0n1 status=progress
 sudo shutdown -h now # REMOVE SDCARD THEN POWER UP WITH BUTTON
+```
+
+### UPDATE AND RECONFIGURE AFTER MIGRATION
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+### Benchmark
+sudo curl https://raw.githubusercontent.com/TheRemote/PiBenchmarks/master/Storage.sh | sudo bash
+
+```
+     Category                  Test                      Result
+HDParm                    Disk Read                 369.24 MB/s
+HDParm                    Cached Disk Read          371.00 MB/s
+DD                        Disk Write                261 MB/s
+FIO                       4k random read            53753 IOPS (215013 KB/s)
+FIO                       4k random write           28603 IOPS (114413 KB/s)
+IOZone                    4k read                   64651 KB/s
+IOZone                    4k write                  98197 KB/s
+IOZone                    4k random read            45374 KB/s
+IOZone                    4k random write           75672 KB/s
+
+                          Score: 18693
+
+Compare with previous benchmark results at:
+https://pibenchmarks.com/
 ```
