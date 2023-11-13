@@ -4,9 +4,11 @@
     - [Get image into Downloads to flash nvme](#get-image-into-downloads-to-flash-nvme)
     - [UPDATE AND RECONFIGURE AFTER MIGRATION](#update-and-reconfigure-after-migration)
     - [Benchmark](#benchmark)
+  - [Base Software Installation](#base-software-installation)
+    - [Docker](#docker)
 
 # Orange pi 5 Media Box
-
+https://www.crosstalksolutions.com/orange-pi-5-simple-overview-and-installation-with-m-2-ssd/
 ## initial setup
 ```bash
 ifconfig
@@ -74,6 +76,7 @@ sudo shutdown -h now # REMOVE SDCARD THEN POWER UP WITH BUTTON
 
 ### UPDATE AND RECONFIGURE AFTER MIGRATION
 ```bash
+orangepi-config # for timezone
 sudo apt update && sudo apt upgrade -y
 ```
 ### Benchmark
@@ -96,3 +99,56 @@ IOZone                    4k random write           75672 KB/s
 Compare with previous benchmark results at:
 https://pibenchmarks.com/
 ```
+
+## Base Software Installation
+CHECK IF DOCKER IS ALREADY INSTALLED BEFORE DOING THIS!!
+### Docker
+To install Docker on Ubuntu Server and address the GPG key updates, follow these steps:
+
+1. Update your existing list of packages:
+```
+sudo apt update
+```
+
+2. Install prerequisite packages which let `apt` use packages over HTTPS:
+```
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+```
+
+3. Download the GPG key for the Docker repository to your system:
+```
+cd ~
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o docker.gpg
+```
+
+4. Add the GPG key to your trusted keys:
+```
+sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg docker.gpg
+```
+
+5. Add the Docker repository to APT sources using the trusted keyring:
+```
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+
+6. Update the package database with the Docker packages from the newly added repo:
+```
+sudo apt update
+```
+
+7. Install Docker:
+```
+sudo apt install docker-ce docker-ce-cli containerd.io
+```
+
+8. Verify that Docker is installed and running:
+```
+sudo systemctl status docker
+```
+
+9. (Optional) To run Docker commands without `sudo`, add your user to the `docker` group:
+```
+sudo usermod -aG docker ${USER}
+```
+
+After adding your user to the `docker` group, you will need to log out and back in for this to take effect. Docker is now installed and ready for personal use on your Ubuntu Server.
