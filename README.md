@@ -1,10 +1,11 @@
 - [Orange pi 5 Media Box](#orange-pi-5-media-box)
   - [initial setup](#initial-setup)
     - [Delete partitions](#delete-partitions)
+      - [SHORTCUT](#shortcut)
     - [Get image into Downloads to flash nvme](#get-image-into-downloads-to-flash-nvme)
-    - [UPDATE AND RECONFIGURE AFTER MIGRATION](#update-and-reconfigure-after-migration)
     - [Benchmark](#benchmark)
   - [Base Software Installation](#base-software-installation)
+    - [FIREFOX](#firefox)
     - [Docker](#docker)
 
 # Orange pi 5 Media Box
@@ -66,19 +67,20 @@ The operation has completed successfully
 ```
 - Do the same for `sudo gdisk /dev/nvme0n1`
 
+#### SHORTCUT
+```bash
+# for 7
+echo -e "p\nd\n1\nd\n2\nd\n3\nd\n4\nd\n5\nd\n6\nd\n7\nw\nY" | sudo gdisk /dev/mtdblock0 && echo -e "p\nd\n1\nd\n2\nd\n3\nd\n4\nd\n5\nd\n6\nd\n7\nw\nY" | sudo gdisk /dev/nvme0n1
+# for 2
+echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/mtdblock0 && echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/nvme0n1
+```
+
 ### Get image into Downloads to flash nvme
 ```bash
-cd /home/orangepi/Downloads
-ls -lah
-sudo dd bs=1M if=Orangepi5_1.1.6_ubuntu_jammy_server_linux5.10.110.img of=/dev/nvme0n1 status=progress
+cd /home/orangepi/Downloads && ls -lah && sudo dd bs=1M if=Armbian_23.8.1_Orangepi5_jammy_legacy_5.10.160_gnome_desktop.img of=/dev/nvme0n1 status=progress && orangepi-config #apply option 7 for installs!
 sudo shutdown -h now # REMOVE SDCARD THEN POWER UP WITH BUTTON
 ```
 
-### UPDATE AND RECONFIGURE AFTER MIGRATION
-```bash
-orangepi-config # for timezone
-sudo apt update && sudo apt upgrade -y
-```
 ### Benchmark
 sudo curl https://raw.githubusercontent.com/TheRemote/PiBenchmarks/master/Storage.sh | sudo bash
 
@@ -102,6 +104,14 @@ https://pibenchmarks.com/
 
 ## Base Software Installation
 CHECK IF DOCKER IS ALREADY INSTALLED BEFORE DOING THIS!!
+### FIREFOX
+```bash
+sudo apt install openbox xorg firefox -y
+mkdir -p ~/.config/openbox
+echo "firefox" > ~/.config/openbox/autostart
+chmod +x ~/.config/openbox/autostart
+```
+`startx /usr/bin/openbox-session`
 ### Docker
 To install Docker on Ubuntu Server and address the GPG key updates, follow these steps:
 
@@ -152,3 +162,7 @@ sudo usermod -aG docker ${USER}
 ```
 
 After adding your user to the `docker` group, you will need to log out and back in for this to take effect. Docker is now installed and ready for personal use on your Ubuntu Server.
+
+### docker jellyfin rockchip
+https://forum.armbian.com/topic/29742-jellyfin-docker-hardware-acceleration/
+https://hub.docker.com/r/jjm2473/jellyfin-mpp
