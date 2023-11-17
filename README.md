@@ -7,6 +7,9 @@
   - [Base Software Installation](#base-software-installation)
     - [FIREFOX](#firefox)
     - [Docker](#docker)
+    - [docker jellyfin rockchip](#docker-jellyfin-rockchip)
+    - [martin](#martin)
+    - [THANK GOD SOMEONE DID THIS](#thank-god-someone-did-this)
 
 # Orange pi 5 Media Box
 https://www.crosstalksolutions.com/orange-pi-5-simple-overview-and-installation-with-m-2-ssd/
@@ -77,7 +80,7 @@ echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/mtdblock0 && echo -e "p
 
 ### Get image into Downloads to flash nvme
 ```bash
-cd /home/orangepi/Downloads && ls -lah && sudo dd bs=1M if=Armbian_23.8.1_Orangepi5_jammy_legacy_5.10.160_gnome_desktop.img of=/dev/nvme0n1 status=progress && orangepi-config #apply option 7 for installs!
+cd /home/orangepi/Downloads && ls -lah && sudo dd bs=1M if=ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img of=/dev/nvme0n1 status=progress && orangepi-config #apply option 7 for installs!
 sudo shutdown -h now # REMOVE SDCARD THEN POWER UP WITH BUTTON
 ```
 
@@ -166,3 +169,23 @@ After adding your user to the `docker` group, you will need to log out and back 
 ### docker jellyfin rockchip
 https://forum.armbian.com/topic/29742-jellyfin-docker-hardware-acceleration/
 https://hub.docker.com/r/jjm2473/jellyfin-mpp
+
+### martin
+echo -e "\n" | ssh-keygen -t rsa -b 4096
+cat ~/.ssh/id_rsa.pub
+
+sudo apt install software-properties-common sudo add-apt-repository -y ppa:team-xbmc/kodi-old sudo apt update && sudo apt install kodi
+
+If you want to install a specific version of Kodi, you need to modify the first task. Instead of `state: latest`, you would specify the version number with the `pkg` parameter like this:
+
+```yaml
+- name: Install Specific Version of Kodi
+  apt:
+    pkg: kodi=2:18.9+git20201024.0821-final-0bionic
+    state: present
+```
+
+Replace `2:18.9+git20201024.0821-final-0bionic` with the actual version string you want to install.
+
+### THANK GOD SOMEONE DID THIS
+https://github.com/Joshua-Riek/ubuntu-rockchip
