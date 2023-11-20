@@ -10,6 +10,7 @@
     - [docker jellyfin rockchip](#docker-jellyfin-rockchip)
     - [martin](#martin)
     - [THANK GOD SOMEONE DID THIS](#thank-god-someone-did-this)
+- [vs code](#vs-code)
 
 # Orange pi 5 Media Box
 https://www.crosstalksolutions.com/orange-pi-5-simple-overview-and-installation-with-m-2-ssd/
@@ -189,3 +190,10 @@ Replace `2:18.9+git20201024.0821-final-0bionic` with the actual version string y
 
 ### THANK GOD SOMEONE DID THIS
 https://github.com/Joshua-Riek/ubuntu-rockchip
+
+# vs code
+`sudo nano /etc/profile`
+`export PATH="/home/jesse/groovy/groovy-4.0.15/bin:$PATH"``
+https://groovy.apache.org/download.html
+https://code.visualstudio.com/Download#
+`sudo dpkg -i code_1.84.2-1699527205_arm64.deb`
