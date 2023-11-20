@@ -192,8 +192,8 @@ Replace `2:18.9+git20201024.0821-final-0bionic` with the actual version string y
 https://github.com/Joshua-Riek/ubuntu-rockchip
 
 # vs code
-`sudo nano /etc/profile`
-`export PATH="/home/jesse/groovy/groovy-4.0.15/bin:$PATH"`
+Open your .bashrc file with the command `nano ~/.bashrc` in terminal. At the end of the file, add this line: `export PATH=$PATH:/home/jesse/groovy/groovy-4.0.15/bin`. Save and exit. Reload .bashrc with the command `source ~/.bashrc`. Now, you should be able to call groovy from anywhere.
+
 https://groovy.apache.org/download.html
 https://code.visualstudio.com/Download#
 `sudo dpkg -i code_1.84.2-1699527205_arm64.deb`
