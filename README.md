@@ -197,3 +197,7 @@ https://github.com/Joshua-Riek/ubuntu-rockchip
 https://groovy.apache.org/download.html
 https://code.visualstudio.com/Download#
 `sudo dpkg -i code_1.84.2-1699527205_arm64.deb`
+```bash
+git config --global user.name "Jesse"
+git config --global user.email "jesse1819@gmail.com"
+```
