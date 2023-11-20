@@ -196,7 +196,7 @@ https://github.com/Joshua-Riek/ubuntu-rockchip
 
 # HOST Apps
 ## vs code
-Open your .bashrc file with the command `nano ~/.bashrc` in terminal. At the end of the file, add this line: `export PATH=$PATH:/home/jesse/groovy/groovy-4.0.15/bin`. Save and exit. Reload .bashrc with the command `source ~/.bashrc`. Now, you should be able to call groovy from anywhere.
+Open your .bashrc file with the command `nano ~/.bashrc` in terminal. At the end of the file, add this line: `export PATH=$PATH:/home/jesse/groovy/groovy-4.0.15/bin` and `printf "\e[?2004l"`. Save and exit. Reload .bashrc with the command `source ~/.bashrc`. Now, you should be able to call groovy from anywhere.
 
 https://groovy.apache.org/download.html
 https://code.visualstudio.com/Download#

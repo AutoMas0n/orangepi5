@@ -22,8 +22,8 @@ sudo apt install ansible -y
 1. Create a directory for your Ansible project:
 
 ```bash
-mkdir ~/ansible-project
-cd ~/ansible-project
+mkdir ansible-project
+cd ansible-project
 ```
 
 2. Create a hosts inventory file (e.g., `hosts.ini`):
