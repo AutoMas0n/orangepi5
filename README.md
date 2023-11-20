@@ -10,7 +10,9 @@
     - [docker jellyfin rockchip](#docker-jellyfin-rockchip)
     - [martin](#martin)
     - [THANK GOD SOMEONE DID THIS](#thank-god-someone-did-this)
-- [vs code](#vs-code)
+- [HOST Apps](#host-apps)
+  - [vs code](#vs-code)
+  - [Firefox](#firefox-1)
 - [TODO](#todo)
 
 # Orange pi 5 Media Box
@@ -192,7 +194,8 @@ Replace `2:18.9+git20201024.0821-final-0bionic` with the actual version string y
 ### THANK GOD SOMEONE DID THIS
 https://github.com/Joshua-Riek/ubuntu-rockchip
 
-# vs code
+# HOST Apps
+## vs code
 Open your .bashrc file with the command `nano ~/.bashrc` in terminal. At the end of the file, add this line: `export PATH=$PATH:/home/jesse/groovy/groovy-4.0.15/bin`. Save and exit. Reload .bashrc with the command `source ~/.bashrc`. Now, you should be able to call groovy from anywhere.
 
 https://groovy.apache.org/download.html
@@ -201,6 +204,12 @@ https://code.visualstudio.com/Download#
 ```bash
 git config --global user.name "Jesse"
 git config --global user.email "jesse1819@gmail.com"
+```
+
+## Firefox
+```
+sudo add-apt-repository ppa:mozillateam/ppa
+sudo apt install firefox-esr
 ```
 
 # TODO
