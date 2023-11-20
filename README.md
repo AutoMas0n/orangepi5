@@ -193,7 +193,7 @@ https://github.com/Joshua-Riek/ubuntu-rockchip
 
 # vs code
 `sudo nano /etc/profile`
-`export PATH="/home/jesse/groovy/groovy-4.0.15/bin:$PATH"``
+`export PATH="/home/jesse/groovy/groovy-4.0.15/bin:$PATH"`
 https://groovy.apache.org/download.html
 https://code.visualstudio.com/Download#
 `sudo dpkg -i code_1.84.2-1699527205_arm64.deb`
