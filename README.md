@@ -11,6 +11,7 @@
     - [martin](#martin)
     - [THANK GOD SOMEONE DID THIS](#thank-god-someone-did-this)
 - [vs code](#vs-code)
+- [TODO](#todo)
 
 # Orange pi 5 Media Box
 https://www.crosstalksolutions.com/orange-pi-5-simple-overview-and-installation-with-m-2-ssd/
@@ -201,3 +202,17 @@ https://code.visualstudio.com/Download#
 git config --global user.name "Jesse"
 git config --global user.email "jesse1819@gmail.com"
 ```
+
+# TODO
+- Create own ansible script properly from ground up
+  - Install docker
+  - Install vs code
+  - git setup scripts
+  - Chromium configurations, extensions
+    - Fix keyring on startup?
+- Create and publish Docker images
+  - Install qbittorrent & PIA
+  - Auto configure qbittorrent configs
+  - Install Jellyfin
+- Create unit tests for container images and configs
+- Investigate streaming and searching options
