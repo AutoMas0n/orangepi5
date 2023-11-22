@@ -220,8 +220,13 @@ sudo apt install firefox-esr
   - Chromium configurations, extensions
     - Fix keyring on startup?
 - Create and publish Docker images
-  - Install qbittorrent & PIA
-  - Auto configure qbittorrent configs
+  - Install PIA
+    - PIA: docker pull qmcgaw/gluetun https://github.com/qdm12/gluetun
+      - https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md
+  - Install & Auto configure qbittorrent configs
+    - https://docs.linuxserver.io/images/docker-qbittorrent/#docker-mods
+  - BOTH??
+    - https://hub.docker.com/r/binhex/arch-qbittorrentvpn/
   - Install Jellyfin
 - Investigate secret management for docker images
   - HashiCorp Vault Free secrets
