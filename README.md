@@ -239,6 +239,7 @@ sudo apt install firefox-esr
   - https://hub.docker.com/r/stremio/server/tags
   - https://web.stremio.com/#/detail/movie/tt11858890/tt11858890
   - https://torrentio.strem.fun/configure
+  - https://blog.stremio.com/using-stremio-service/ OR https://torrentio.strem.fun/lite/configure
 - Reinstall OS script using sd card
 
 ## Reference diagram
