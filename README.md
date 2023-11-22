@@ -219,6 +219,9 @@ sudo apt install firefox-esr
   - Install vs code
   - git setup scripts
   - Chromium configurations, extensions
+    - master_preferences
+      - https://askubuntu.com/questions/1241224/chromium-snap-new-profile-with-master-preferences#:~:text=One%20of%20those%20is%20the%20master_preferences%20file.&text=On%20Linux%2C%20this%20file%20is,data%2Ddir%3D~%2Fnew_profile%20).
+      - https://www.chromium.org/developers/design-documents/first-run-customizations/#:~:text=Chromium%20can%20be%20customized%20to,as%20the%20chrome.exe%20binary.&text=There%20is%20one%20dictionary%2C%20called,list%2C%20called%20%22first_run_tabs%22.
     - Fix keyring on startup?
     - Enable memory saver by default
     - Look for firefox replacement
