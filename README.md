@@ -244,6 +244,8 @@ sudo apt install firefox-esr
   - https://torrentio.strem.fun/configure
   - https://blog.stremio.com/using-stremio-service/ OR https://torrentio.strem.fun/lite/configure
 - Reinstall OS script using sd card
+  - check git for boolean update field (some version check against what is remote vs local) with cron job off hours
+  - be able to boot between sdcard and nvme?
 
 ## Reference diagram
 https://lemmy.ml/pictrs/image/ddc4c780-8776-4c4a-a344-1a571eeb8b12.webp
