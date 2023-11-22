@@ -233,3 +233,4 @@ sudo apt install firefox-esr
 - Auto install watchtower, configure listener for image changes
 - Create unit tests for container images and configs
 - Investigate streaming and searching options
+- Reinstall OS script using sd card
