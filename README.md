@@ -14,6 +14,7 @@
   - [vs code](#vs-code)
   - [Firefox](#firefox-1)
 - [TODO](#todo)
+  - [Reference diagram](#reference-diagram)
 
 # Orange pi 5 Media Box
 https://www.crosstalksolutions.com/orange-pi-5-simple-overview-and-installation-with-m-2-ssd/
@@ -219,6 +220,8 @@ sudo apt install firefox-esr
   - git setup scripts
   - Chromium configurations, extensions
     - Fix keyring on startup?
+    - Enable memory saver by default
+    - Look for firefox replacement
 - Create and publish Docker images
   - Install PIA
     - PIA: docker pull qmcgaw/gluetun https://github.com/qdm12/gluetun
@@ -233,4 +236,10 @@ sudo apt install firefox-esr
 - Auto install watchtower, configure listener for image changes
 - Create unit tests for container images and configs
 - Investigate streaming and searching options
+  - https://hub.docker.com/r/stremio/server/tags
+  - https://web.stremio.com/#/detail/movie/tt11858890/tt11858890
+  - https://torrentio.strem.fun/configure
 - Reinstall OS script using sd card
+
+## Reference diagram
+https://lemmy.ml/pictrs/image/ddc4c780-8776-4c4a-a344-1a571eeb8b12.webp
