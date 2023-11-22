@@ -224,7 +224,7 @@ sudo apt install firefox-esr
   - Auto configure qbittorrent configs
   - Install Jellyfin
 - Investigate secret management for docker images
-  - Github secrets?
+  - HashiCorp Vault Free secrets
 - Auto install watchtower, configure listener for image changes
 - Create unit tests for container images and configs
 - Investigate streaming and searching options
