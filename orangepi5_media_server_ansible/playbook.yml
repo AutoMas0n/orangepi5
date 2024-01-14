@@ -1,0 +1,7 @@
+# playbook.yml
+- hosts: localhost
+  become: true
+  roles:
+    - system_update
+    - package_install
+    - flatpak_repo
