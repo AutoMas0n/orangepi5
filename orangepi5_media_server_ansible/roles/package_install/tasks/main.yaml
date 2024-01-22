@@ -17,6 +17,7 @@
       - docker-ce
       - flatpak
       - gnome-software-plugin-flatpak
+      - gnome-remote-desktop
     state: present
     update_cache: yes
   become: true
