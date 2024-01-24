@@ -1,2 +1,4 @@
 To run:
-`ansible-playbook playbook.yml -i inventory --ask-become-pass`
+```bash
+ansible-playbook playbook.yml -i inventory --ask-become-pass
+```

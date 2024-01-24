@@ -18,6 +18,7 @@
       - flatpak
       - gnome-software-plugin-flatpak
       - gnome-remote-desktop
+      - kdeconnect
     state: present
     update_cache: yes
   become: true
