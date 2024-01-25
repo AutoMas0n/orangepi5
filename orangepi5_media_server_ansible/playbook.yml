@@ -7,3 +7,5 @@
     - package_install
     - flatpak_repo
     - start_vnc
+  vars:
+    vnc_password: 'admin123'
