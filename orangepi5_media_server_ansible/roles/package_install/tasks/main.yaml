@@ -19,6 +19,7 @@
       - gnome-software-plugin-flatpak
       - gnome-remote-desktop
       - kdeconnect
+      - vino
     state: present
     update_cache: yes
   become: true

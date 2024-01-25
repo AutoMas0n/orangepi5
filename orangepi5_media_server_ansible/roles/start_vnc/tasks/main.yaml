@@ -1,10 +1,43 @@
+- name: Check if VNC password is already set
+  ansible.builtin.command:
+    cmd: gsettings get org.gnome.Vino vnc-password
+  register: vnc_password_check
+  failed_when: vnc_password_check.rc != 0
+  ignore_errors: true
+  become: true
+  become_user: "{{ ansible_user_id }}"
+
+- name: Set VNC password
+  ansible.builtin.shell:
+    cmd: >
+      gsettings set org.gnome.Vino require-encryption false &&
+      gsettings set org.gnome.Vino authentication-methods "['vnc']" &&
+      gsettings set org.gnome.Vino vnc-password "$(echo -n 'admin123' | base64)"
+  when: vnc_password_check is failed or ('admin123' | b64encode) not in vnc_password_check.stdout
+  become: true
+  become_user: "{{ ansible_user_id }}"
+
+- name: Check if screen sharing is enabled
+  ansible.builtin.command:
+    cmd: gsettings get org.gnome.desktop.remote-desktop.vnc enable
+  register: screen_sharing_check
+  failed_when: screen_sharing_check.rc != 0
+  changed_when: "screen_sharing_check.stdout != 'true'"
+  become: true
+  become_user: "{{ ansible_user_id }}"
+
 - name: Enable screen sharing
   ansible.builtin.command:
     cmd: gsettings set org.gnome.desktop.remote-desktop.vnc enable true
+  when: "screen_sharing_check.stdout != 'true'"
   become: true
   become_user: "{{ ansible_user_id }}"
   notify: Print IP address
 
-- name: Get IP address
-  ansible.builtin.shell: hostname -I | awk '{print $1}'
-  register: ip_address
+- name: Launch Vino server
+  ansible.builtin.shell:
+    cmd: /usr/lib/vino/vino-server &
+  become: true
+  become_user: "{{ ansible_user_id }}"
+  async: 10
+  poll: 0  
