@@ -11,7 +11,7 @@
     cmd: gsettings set org.gnome.desktop.remote-desktop.vnc auth-method 'password'
   args:
     creates: "{{ ansible_env.HOME }}/.config/dconf/user"
-  become: false
+  become: true
   changed_when: false
   tags: start_vnc  
 
@@ -20,7 +20,7 @@
     cmd: gsettings set org.gnome.desktop.remote-desktop.vnc view-only false
   args:
     creates: "{{ ansible_env.HOME }}/.config/dconf/user"
-  become: false
+  become: true
   changed_when: false
   tags: start_vnc
 
@@ -29,7 +29,7 @@
     cmd: "echo -n '{{ vnc_password }}' | secret-tool store --label='GNOME Remote Desktop VNC password' 'xdg:schema' 'org.gnome.RemoteDesktop.VncPassword'"
   args:
     creates: "{{ ansible_env.HOME }}/.local/share/keyrings"
-  become: false
+  become: true
   register: secret_tool_output
   changed_when: secret_tool_output.stdout != ""
   no_log: false
