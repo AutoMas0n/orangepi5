@@ -233,7 +233,7 @@ sudo apt install firefox-esr
     - https://docs.linuxserver.io/images/docker-qbittorrent/#docker-mods
   - BOTH??
     - https://hub.docker.com/r/binhex/arch-qbittorrentvpn/
-  - Install Jellyfin
+  - Install Jellyfin # done but delfin
 - Investigate secret management for docker images
   - HashiCorp Vault Free secrets
 - Auto install watchtower, configure listener for image changes
