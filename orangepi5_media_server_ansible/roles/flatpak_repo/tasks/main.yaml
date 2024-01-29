@@ -4,3 +4,11 @@
   become: true
   args:
     creates: /var/lib/flatpak/repo/flathub.flatpakrepo
+  tags: flatpak
+
+- name: Install Delfin via Flatpak
+  ansible.builtin.command:
+    cmd: flatpak install -y flathub cafe.avery.Delfin
+  args:
+    creates: /var/lib/flatpak/app/cafe.avery.Delfin
+  tags: flatpak 

@@ -1,4 +1,3 @@
-# playbook.yml
 - hosts: localhost
   gather_facts: true
   become: true
@@ -6,6 +5,8 @@
     - system_update
     - package_install
     - flatpak_repo
-    - start_vnc
-  vars:
-    vnc_password: 'admin123'
+    - install_rustdesk
+    - install_vscode
+    # - start_vnc # Use rustdesk instead: https://github.com/rustdesk/rustdesk/releases
+  # vars: # for - start_vnc 
+    # vnc_password: "{{ ansible_become_pass }}" #TODO Remove

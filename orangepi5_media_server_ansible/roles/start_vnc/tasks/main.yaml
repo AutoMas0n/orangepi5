@@ -2,6 +2,7 @@
   ansible.builtin.package:
     name:
       - gnome-remote-desktop
+      - libsecret-tools
     state: present
   become: true
   tags: start_vnc  
@@ -9,31 +10,89 @@
 - name: Set VNC authentication method to 'password'
   ansible.builtin.command:
     cmd: gsettings set org.gnome.desktop.remote-desktop.vnc auth-method 'password'
-  args:
-    creates: "{{ ansible_env.HOME }}/.config/dconf/user"
-  become: true
+  become_user: "jesse"
   changed_when: false
   tags: start_vnc  
 
 - name: Set VNC view-only to false
   ansible.builtin.command:
     cmd: gsettings set org.gnome.desktop.remote-desktop.vnc view-only false
-  args:
-    creates: "{{ ansible_env.HOME }}/.config/dconf/user"
-  become: true
+  become_user: "jesse"
   changed_when: false
   tags: start_vnc
 
+# TODO maybe you need this for the user not for root, or maybe we need to replace this entirely
 - name: Store VNC password in secret-tool
   ansible.builtin.command:
     cmd: "echo -n '{{ vnc_password }}' | secret-tool store --label='GNOME Remote Desktop VNC password' 'xdg:schema' 'org.gnome.RemoteDesktop.VncPassword'"
   args:
     creates: "{{ ansible_env.HOME }}/.local/share/keyrings"
-  become: true
-  register: secret_tool_output
-  changed_when: secret_tool_output.stdout != ""
+  become_user: "jesse"
   no_log: false
-  tags: start_vnc  
+  tags: start_vnc
+
+- name: Allow VNC traffic
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: '5900'
+    jump: ACCEPT
+  become: true
+  tags: start_vnc
+
+- name: Allow VNC traffic
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: '5902'
+    jump: ACCEPT
+  become: true
+  tags: ip_table
+
+- name: Ensure TLS certificate directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "/etc/ssl/certs"
+    - "/etc/ssl/private"
+  become: true
+  tags: start_vnc 
+
+- name: Generate RDP TLS certificate and key
+  ansible.builtin.openssl_privatekey:
+    path: "/etc/ssl/private/rdp_key.pem"
+    size: 4096
+  become: true
+  tags: start_vnc 
+
+- name: Generate RDP TLS self-signed certificate
+  ansible.builtin.openssl_certificate:
+    path: "/etc/ssl/certs/rdp_cert.pem"
+    privatekey_path: "/etc/ssl/private/rdp_key.pem"
+    provider: selfsigned
+  become: true
+  tags: start_vnc 
+
+- name: Set RDP TLS certificate path
+  ansible.builtin.command:
+    cmd: "gsettings set org.gnome.desktop.remote-desktop.rdp tls-cert '/etc/ssl/certs/rdp_cert.pem'"
+  become_user: "jesse"
+  tags: start_vnc 
+
+- name: Set RDP TLS key path
+  ansible.builtin.command:
+    cmd: "gsettings set org.gnome.desktop.remote-desktop.rdp tls-key '/etc/ssl/private/rdp_key.pem'"
+  become_user: "jesse"
+  tags: start_vnc 
+
+- name: Restart gnome-remote-desktop service for user
+  ansible.builtin.command:
+    cmd: "systemctl --user restart gnome-remote-desktop"
+  become: true
+  become_user: "jesse"
+  tags: start_vnc 
 
 - name: Get IP address
   ansible.builtin.shell: hostname -I | awk '{print $1}'
@@ -41,16 +100,85 @@
   changed_when: false
   tags: start_vnc
 
-- name: Enable gnome-remote-desktop service
-  ansible.builtin.systemd:
-    name: gnome-remote-desktop
-    state: started
-    enabled: yes
-    daemon_reload: yes
-    scope: user
-  become: false
-  notify: Print IP address
+- name: Display IP In Log
+  ansible.builtin.debug:
+    var: ip_address.stdout
   tags: start_vnc
-  changed_when: true
-# - name: Flush handlers to ensure IP address is printed
-#   ansible.builtin.meta: flush_handlers  
+
+
+  ################## STOP
+- name: Uninstall VNC packages
+  ansible.builtin.package:
+    name:
+      - gnome-remote-desktop
+      - libsecret-tools
+    state: absent
+  become: true
+  tags: stop_vnc
+
+# - name: Reset VNC authentication method
+#   ansible.builtin.command:
+#     cmd: gsettings reset org.gnome.desktop.remote-desktop.vnc auth-method
+#   become_user: "jesse"
+#   tags: stop_vnc
+
+# - name: Reset VNC view-only setting
+#   ansible.builtin.command:
+#     cmd: gsettings reset org.gnome.desktop.remote-desktop.vnc view-only
+#   become_user: "jesse"
+#   tags: stop_vnc
+
+# - name: Remove VNC password from secret-tool
+#   ansible.builtin.command:
+#     cmd: secret-tool clear 'xdg:schema' 'org.gnome.RemoteDesktop.VncPassword'
+#   become_user: "jesse"
+#   tags: stop_vnc
+
+- name: Remove VNC traffic rule for port 5900
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: '5900'
+    jump: ACCEPT
+    state: absent
+  become: true
+  tags: stop_vnc
+
+- name: Remove VNC traffic rule for port 5902
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: '5902'
+    jump: ACCEPT
+    state: absent
+  become: true
+  tags: stop_vnc
+
+# - name: Reset RDP TLS certificate path
+#   ansible.builtin.command:
+#     cmd: gsettings reset org.gnome.desktop.remote-desktop.rdp tls-cert
+#   become_user: "jesse"
+#   tags: stop_vnc
+
+# - name: Reset RDP TLS key path
+#   ansible.builtin.command:
+#     cmd: gsettings reset org.gnome.desktop.remote-desktop.rdp tls-key
+#   become_user: "jesse"
+#   tags: stop_vnc
+
+- name: Delete RDP TLS certificate and key
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/etc/ssl/certs/rdp_cert.pem"
+    - "/etc/ssl/private/rdp_key.pem"
+  become: true
+  tags: stop_vnc
+
+# - name: Stop gnome-remote-desktop service for user
+#   ansible.builtin.command:
+#     cmd: "systemctl --user stop gnome-remote-desktop"
+#   become: true
+#   become_user: "jesse"
+#   tags: stop_vnc

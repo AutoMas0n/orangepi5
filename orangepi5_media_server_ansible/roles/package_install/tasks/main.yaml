@@ -17,8 +17,8 @@
       - docker-ce
       - flatpak
       - gnome-software-plugin-flatpak
-      - gnome-remote-desktop
       - kdeconnect
+      - git
     state: present
     update_cache: yes
   become: true

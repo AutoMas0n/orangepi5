@@ -215,8 +215,8 @@ sudo apt install firefox-esr
 
 # TODO
 - Create own ansible script properly from ground up
-  - Install docker
-  - Install vs code
+  - Install docker # done
+  - Install vs code #done
   - git setup scripts
   - Chromium configurations, extensions
     - master_preferences
