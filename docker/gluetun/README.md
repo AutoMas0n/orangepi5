@@ -9,10 +9,9 @@ sudo docker run --rm -v .:/gluetun qmcgaw/gluetun format-servers -private-intern
 
 ## Starting Gluetun
 ```bash
-source secrets \
+source secrets && \
 sudo docker run -it --rm --cap-add=NET_ADMIN -e VPN_SERVICE_PROVIDER="private internet access" \
 -e OPENVPN_USER=$OPENVPN_USER -e OPENVPN_PASSWORD=$OPENVPN_PASSWORD \
 -v gluetun:/gluetun \
--e SERVER_REGIONS=America \
--e SERVER_NAMES=Agena qmcgaw/gluetun
+-e SERVER_REGIONS="ca toronto" qmcgaw/gluetun
 ```
