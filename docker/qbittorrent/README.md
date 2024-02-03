@@ -1,0 +1,46 @@
+## Creating a Fully Customizable qBittorrent Docker Container with Configuration as Code
+
+Yes, you can create a fully customizable qBittorrent Docker container with configuration as code by using Docker volumes to provide configuration files and by setting environment variables. Here's an example of how you can do this using a `docker-compose.yml` file:
+
+```yaml
+version: '3'
+services:
+  qbittorrent:
+    image: linuxserver/qbittorrent
+    container_name: qbittorrent
+    environment:
+      - PUID=1000 # Replace with your user id
+      - PGID=1000 # Replace with your group id
+      - TZ=Europe/London # Replace with your timezone
+      - UMASK_SET=022 # Optional: Set permissions for newly created files
+      - WEBUI_PORT=8080 # Optional: Set the port for the web interface
+    volumes:
+      - /path/to/config:/config # Replace with the path to your qBittorrent config files
+      - /path/to/downloads:/downloads # Replace with the path to your download folder
+    ports:
+      - "6881:6881"
+      - "6881:6881/udp"
+      - "8080:8080" # Match WEBUI_PORT if changed
+    restart: unless-stopped
+```
+
+In the above `docker-compose.yml` file, replace `/path/to/config` with the path to the directory on your host system where you want to store qBittorrent's configuration files. This directory will contain the `qBittorrent.conf` file, which you can edit to change qBittorrent's settings without using the UI.
+
+For example, you can configure the `qBittorrent.conf` file with your desired settings, like so:
+
+```ini
+[Preferences]
+Downloads\SavePath=/downloads/
+Connection\PortRangeMin=6881
+WebUI\Port=8080
+```
+
+Make sure to create the configuration directory and the `qBittorrent.conf` file on your host system before starting the Docker container. When you start the container, qBittorrent will use the provided configuration file.
+
+To deploy this container, save the `docker-compose.yml` file and run:
+
+```bash
+docker-compose up -d
+```
+
+You can also set additional qBittorrent settings through environment variables provided by the Docker image you are using. Check the documentation for the specific qBittorrent Docker image you choose for any additional environment variables that can be set for further customization.

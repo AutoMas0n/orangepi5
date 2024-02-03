@@ -3,16 +3,19 @@
     url: https://download.docker.com/linux/ubuntu/gpg
     state: present
   become: true
+  tags: package_install
 
 - name: Add Docker Repository
   apt_repository:
     repo: "deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
     state: present
   become: true
+  tags: package_install
 
 - name: Install APT packages
   apt:
     name:
+      - ansible
       - firefox
       - docker-ce
       - flatpak
@@ -22,3 +25,4 @@
     state: present
     update_cache: yes
   become: true
+  tags: package_install  

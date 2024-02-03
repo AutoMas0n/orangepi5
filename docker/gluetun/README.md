@@ -1,5 +1,6 @@
 - [List of VPN servers](#list-of-vpn-servers)
 - [Starting Gluetun](#starting-gluetun)
+- [TODO](#todo)
 
 ## List of VPN servers
 ```bash
@@ -9,9 +10,13 @@ sudo docker run --rm -v .:/gluetun qmcgaw/gluetun format-servers -private-intern
 
 ## Starting Gluetun
 ```bash
-source secrets && \
-sudo docker run -it --rm --cap-add=NET_ADMIN -e VPN_SERVICE_PROVIDER="private internet access" \
--e OPENVPN_USER=$OPENVPN_USER -e OPENVPN_PASSWORD=$OPENVPN_PASSWORD \
--v gluetun:/gluetun \
--e SERVER_REGIONS="ca toronto" qmcgaw/gluetun
+source secrets
+docker-compose up -d
+```
+
+## TODO
+```bash
+git clone https://github.com/pia-foss/manual-connections.git
+cd manual-connections
+sudo ./run_setup.sh
 ```

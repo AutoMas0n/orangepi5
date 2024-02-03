@@ -1,0 +1,19 @@
+- name: Disable periodic updates
+  copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Download-Upgradeable-Packages "1";
+      APT::Periodic::AutocleanInterval "7";
+      APT::Periodic::Unattended-Upgrade "1";
+#      APT::Periodic::Update-Package-Lists "0";
+#      APT::Periodic::Download-Upgradeable-Packages "0";
+#      APT::Periodic::AutocleanInterval "0";
+#      APT::Periodic::Unattended-Upgrade "1";
+  tags: disable_update_notifier     
+- name: Ensure unattended-upgrades is enabled
+  systemd:
+    name: apt-daily-upgrade.timer
+    enabled: true
+    state: started
+  tags: disable_update_notifier    
