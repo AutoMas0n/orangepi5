@@ -22,6 +22,7 @@
       - gnome-software-plugin-flatpak
       - kdeconnect
       - git
+      - jq
     state: present
     update_cache: yes
   become: true

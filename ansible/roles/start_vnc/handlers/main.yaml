@@ -1,3 +1,0 @@
-- name: Print IP address
-  ansible.builtin.debug:
-    msg: "Host IP Address: {{ ip_address.stdout }}"
