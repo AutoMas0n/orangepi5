@@ -23,6 +23,8 @@
       - kdeconnect
       - git
       - jq
+      - wireguard-tools
+      - golang
     state: present
     update_cache: yes
   become: true

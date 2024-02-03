@@ -13,31 +13,39 @@ get_role_names() {
 }
 
 # Convert the role names to a YAML list
-role_list=$(get_role_names)
+all_role_list=$(get_role_names)
 
-# If arguments are provided, use them as tags
-tags=""
-if [ $# -gt 0 ]; then
-  tags="--tags $*"
-fi
-
-# Create a temporary playbook with the dynamic roles
+# Create a temporary playbook
 temp_playbook=$(mktemp)
 {
   printf -- "- hosts: localhost\n"
   printf -- "  gather_facts: true\n"
   printf -- "  become: true\n"
   printf -- "  roles:\n"
-  while IFS= read -r role; do
-    printf "    - { role: %s }\n" "$role"
-  done <<< "$role_list"
 } > "${temp_playbook}"
+
+# If arguments are provided, use them as role names, otherwise use all roles
+if [ $# -gt 0 ]; then
+  for role in "$@"; do
+    if printf '%s\n' "${all_role_list[@]}" | grep -qx "${role}"; then
+      printf "    - { role: %s }\n" "$role" >> "${temp_playbook}"
+    else
+      echo "Role '${role}' does not exist."
+      rm "${temp_playbook}"
+      exit 1
+    fi
+  done
+else
+  for role in ${all_role_list[@]}; do
+    printf "    - { role: %s }\n" "$role" >> "${temp_playbook}"
+  done
+fi
 
 # Set ANSIBLE_ROLES_PATH to the roles directory
 export ANSIBLE_ROLES_PATH="${WORKING_DIR}/roles"
 
-# Run the Ansible playbook with the specified tags
-ansible-playbook "${temp_playbook}" -i "${WORKING_DIR}/inventory" --ask-become-pass $tags
+# Run the Ansible playbook
+ansible-playbook "${temp_playbook}" -i "${WORKING_DIR}/inventory" --ask-become-pass
 
 # DEBUG Print generated playbook
 # echo "Generated dynamic playbook:"
