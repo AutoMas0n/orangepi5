@@ -1,8 +1,8 @@
-- [List of VPN servers](#list-of-vpn-servers)
+- [List of VPN servers (dont need anymore)](#list-of-vpn-servers-dont-need-anymore)
 - [Starting Gluetun](#starting-gluetun)
-- [TODO](#todo)
+- [Install Prereqs and run Gluetun](#install-prereqs-and-run-gluetun)
 
-## List of VPN servers
+## List of VPN servers (dont need anymore)
 ```bash
 # in docker/glueton/ 
 sudo docker run --rm -v .:/gluetun qmcgaw/gluetun format-servers -private-internet-access
@@ -14,13 +14,13 @@ source secrets
 docker-compose up -d
 ```
 
-## TODO
+## Install Prereqs and run Gluetun
+https://github.com/qdm12/gluetun-wiki/issues/35
 ```bash
-git clone https://github.com/pia-foss/manual-connections.git
-cd manual-connections
-export PIA_TOKEN=$(source ../secrets && sudo PIA_USER=$PIA_USER PIA_PASS=$PIA_PASS ./get_token.sh | grep -oP 'PIA_TOKEN=\K\S+')
-export PIA_TOKEN=$(source ../secrets && sudo PIA_USER=$PIA_USER PIA_PASS=$PIA_PASS ./get_region_and_token.sh | grep -oP 'PIA_TOKEN=\K\S+')
-sudo PIA_CONNECT=false PIA_TOKEN=$PIA_TOKEN ./connect_to_wireguard_with_token.sh
+source /etc/profile && export PATH=$PATH:$(go env GOPATH)/bin
+go install github.com/kylegrantlucas/pia-wg-config@latest
+source ../secrets && pia-wg-config -o wg0.conf $PIA_USER $PIA_PASS
 
-sudo ./run_setup.sh
+sudo PIA_USER=$PIA_USER PIA_PASS=$PIA_PASS docker-compose up -d
+sudo docker logs gluetun
 ```
