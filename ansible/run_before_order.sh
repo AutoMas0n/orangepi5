@@ -24,10 +24,7 @@ temp_playbook=$(mktemp)
   printf -- "  roles:\n"
 } > "${temp_playbook}"
 
-# Ensure roles are added in a specific order
-ensure_order=( "system_update" "disable_update_notifier" "package_install" )
-
-# If arguments are provided, use them as role names
+# If arguments are provided, use them as role names, otherwise use all roles
 if [ $# -gt 0 ]; then
   for role in "$@"; do
     if printf '%s\n' "${all_role_list[@]}" | grep -qx "${role}"; then
@@ -39,29 +36,19 @@ if [ $# -gt 0 ]; then
     fi
   done
 else
-  # Add the specific order roles if they exist in all_role_list
-  for role in "${ensure_order[@]}"; do
-    if printf '%s\n' "${all_role_list[@]}" | grep -qx "${role}"; then
-      printf "    - { role: %s }\n" "$role" >> "${temp_playbook}"
-    fi
-  done
-
-  # Add all other roles
   for role in ${all_role_list[@]}; do
-    if ! printf '%s\n' "${ensure_order[@]}" | grep -qx "${role}"; then
-      printf "    - { role: %s }\n" "$role" >> "${temp_playbook}"
-    fi
+    printf "    - { role: %s }\n" "$role" >> "${temp_playbook}"
   done
 fi
 
 # Set ANSIBLE_ROLES_PATH to the roles directory
 export ANSIBLE_ROLES_PATH="${WORKING_DIR}/roles"
 
-# DEBUG Print generated playbook
-# echo "Generated dynamic playbook:"
-cat "${temp_playbook}"
 # Run the Ansible playbook
 ansible-playbook "${temp_playbook}" -i "${WORKING_DIR}/inventory" --ask-become-pass
 
+# DEBUG Print generated playbook
+# echo "Generated dynamic playbook:"
+# cat "${temp_playbook}"
 # Remove the temporary playbook
 rm "${temp_playbook}"

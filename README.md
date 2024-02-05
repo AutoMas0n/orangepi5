@@ -1,4 +1,6 @@
 - [Orange pi 5 Media Box](#orange-pi-5-media-box)
+  - [Copy a test script](#copy-a-test-script)
+  - [Getting a new image](#getting-a-new-image)
   - [initial setup](#initial-setup)
     - [Delete partitions](#delete-partitions)
       - [SHORTCUT](#shortcut)
@@ -18,6 +20,22 @@
 
 # Orange pi 5 Media Box
 https://www.crosstalksolutions.com/orange-pi-5-simple-overview-and-installation-with-m-2-ssd/
+
+## Copy a test script
+```bash
+scp ~/Downloads/test.sh orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/test.sh /home/orangepi/Downloads/'
+```
+
+## Getting a new image
+```bash
+#Whats the IP of the pi? Hostname -I
+#Download the file
+#unxz
+unxz ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img.xz
+#remember, orangepi
+scp ~/Downloads/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img /home/orangepi/Downloads/'
+```
+
 ## initial setup
 ```bash
 ifconfig

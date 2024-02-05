@@ -25,7 +25,7 @@ temp_playbook=$(mktemp)
 } > "${temp_playbook}"
 
 # Ensure roles are added in a specific order
-ensure_order=( "system_update" "disable_update_notifier" "package_install" )
+ensure_order=( "system_update" "package_install" )
 
 # If arguments are provided, use them as role names
 if [ $# -gt 0 ]; then
