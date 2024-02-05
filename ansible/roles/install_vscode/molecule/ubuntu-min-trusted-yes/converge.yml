@@ -1,0 +1,22 @@
+# code: language=ansible
+---
+- name: Converge
+  hosts: all
+
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+      changed_when: false
+      when: ansible_pkg_mgr == 'apt'
+
+  roles:
+    - role: ansible-role-visual-studio-code
+      visual_studio_code_gpgcheck: false
+
+  post_tasks:
+    - name: Install which
+      ansible.builtin.package:
+        name: which
+        state: present
+      when: ansible_pkg_mgr in ('yum', 'dnf', 'zypper')

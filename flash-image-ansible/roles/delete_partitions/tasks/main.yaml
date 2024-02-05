@@ -1,0 +1,33 @@
+- name: Delete all partitions from specified devices
+  shell: |
+    #!/bin/bash
+    set -e # Exit on any error
+    for device in /dev/mtdblock0 /dev/nvme0n1; do
+      part_numbers=$(sudo gdisk "$device" << EOF | awk '/^[[:blank:]]*[0-9]+[[:blank:]]+/{print $1}'
+    p
+    q
+    EOF
+      )
+      
+      if [ -n "$part_numbers" ]; then
+        gdisk_cmds="p"
+        for part_num in $part_numbers; do
+          gdisk_cmds="$gdisk_cmds\nd\n$part_num"
+        done
+        gdisk_cmds="$gdisk_cmds\nw\nY"
+        
+        echo -e "$gdisk_cmds" | sudo gdisk "$device"
+      else
+        echo "No partitions found on $device."
+      fi
+    done    
+  args:
+    executable: /bin/bash
+  register: gdisk_output
+  failed_when: gdisk_output.rc != 0
+
+- name: Output result of deletion task
+  debug:
+    msg:
+      - "STDOUT: {{ gdisk_output.stdout_lines }}"
+      - "STDERR: {{ gdisk_output.stderr_lines }}"  

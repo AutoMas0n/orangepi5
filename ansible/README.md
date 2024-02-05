@@ -1,15 +1,17 @@
 To run:
 ```bash
-./run.sh
+export SSH_USER=orangepi SSH_PASS=orangepi
+sudo -E ./run.sh 192.168.2.215
 ```
 
-or with tags
+or with roles
 ```bash
-./run.sh install_vscode install_rustdesk
+export SSH_USER=orangepi SSH_PASS=orangepi
+sudo -E ./run.sh 192.168.2.215 my_ip
 ```
 
 ## Info
-The playbook is automatically generated for you, it will contain:
+The playbook is automatically generated for you, it will generate dynamic playbook:
 ```yaml
 - hosts: localhost
   gather_facts: true

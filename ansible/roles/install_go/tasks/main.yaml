@@ -22,7 +22,7 @@
   unarchive:
     src: /tmp/go1.21.6.linux-arm64.tar.gz
     dest: /usr/local
-    remote_src: false
+    remote_src: "{{ 'true' if inventory_hostname != 'localhost' else 'false' }}"
     creates: /usr/local/go/bin/go
   when: go_version_result.stdout is not defined or 'go1.21.6' not in go_version_result.stdout | default('')
 

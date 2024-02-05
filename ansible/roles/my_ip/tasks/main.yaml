@@ -1,0 +1,8 @@
+- name: Get the IP address of the current host
+  ansible.builtin.shell: hostname -I | awk '{print $1}'
+  register: ip_address
+  changed_when: false
+
+- name: Print the IP address to the console
+  ansible.builtin.debug:
+    msg: "The IP address is: {{ ip_address.stdout }}"

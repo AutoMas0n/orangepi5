@@ -103,7 +103,7 @@ echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/mtdblock0 && echo -e "p
 
 ### Get image into Downloads to flash nvme
 ```bash
-cd /home/orangepi/Downloads && ls -lah && sudo dd bs=1M if=ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img of=/dev/nvme0n1 status=progress && orangepi-config #apply option 7 for installs!
+cd /home/orangepi/Downloads && ls -lah && sudo dd bs=1M if=ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img of=/dev/nvme0n1 status=progress && sudo orangepi-config #apply option 7 for installs!
 sudo shutdown -h now # REMOVE SDCARD THEN POWER UP WITH BUTTON
 ```
 
