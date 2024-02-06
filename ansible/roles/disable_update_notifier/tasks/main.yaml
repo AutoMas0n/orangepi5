@@ -1,4 +1,24 @@
-- name: Disable periodic updates
+- name: Configure unattended-upgrades for security updates only
+  copy:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}";
+        "${distro_id}:${distro_codename}-security";
+        // Extended security maintenance; doesn't necessarily exist for
+        // every release and this system may not have it installed, but if
+        // available, the policy for updates is such that unattended-upgrades
+        // should also install from here by default.
+        "${distro_id}ESMApps:${distro_codename}-apps-security";
+        "${distro_id}ESM:${distro_codename}-infra-security";
+      };
+      Unattended-Upgrade::Package-Blacklist {
+      };
+      Unattended-Upgrade::Automatic-Reboot "false";
+  become: true
+  tags: configure_unattended_upgrades
+
+- name: Disable automatic updates notification
   copy:
     dest: /etc/apt/apt.conf.d/20auto-upgrades
     content: |
@@ -6,14 +26,5 @@
       APT::Periodic::Download-Upgradeable-Packages "1";
       APT::Periodic::AutocleanInterval "7";
       APT::Periodic::Unattended-Upgrade "1";
-#      APT::Periodic::Update-Package-Lists "0";
-#      APT::Periodic::Download-Upgradeable-Packages "0";
-#      APT::Periodic::AutocleanInterval "0";
-#      APT::Periodic::Unattended-Upgrade "1";
-  tags: disable_update_notifier     
-- name: Ensure unattended-upgrades is enabled
-  systemd:
-    name: apt-daily-upgrade.timer
-    enabled: true
-    state: started
-  tags: disable_update_notifier    
+  become: true
+  tags: disable_update_notifier
