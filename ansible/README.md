@@ -1,7 +1,7 @@
 To run:
 ```bash
 export SSH_USER=orangepi SSH_PASS=orangepi
-sudo -E ./run.sh 192.168.2.215
+sudo -E ./run.sh 192.168.2.219
 ```
 
 or with roles

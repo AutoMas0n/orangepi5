@@ -1,9 +1,0 @@
-- name: Install APT packages
-  apt:
-    name:
-      - git
-      - jq
-    state: present
-    update_cache: yes
-  become: true
-  tags: package_install

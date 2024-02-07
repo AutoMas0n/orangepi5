@@ -7,9 +7,6 @@
       - gnome-software-plugin-flatpak
       - kdeconnect
       - git
-      - jq
-      - wireguard-tools
-      # - golang # use ansible role `install_go`
     state: present
     update_cache: yes
   become: true
