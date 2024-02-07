@@ -1,0 +1,12 @@
+- name: Copy the flash_firmware script to the remote machine
+  become: true
+  copy:
+    src: flash_firmware.sh
+    dest: /usr/local/bin/flash_firmware.sh
+    mode: '0755'
+
+- name: flash firmware with orangepi-onfig
+  become: true
+  shell: "/usr/local/bin/flash_firmware.sh"
+  args:
+    executable: /bin/bash

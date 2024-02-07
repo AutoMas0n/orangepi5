@@ -1,6 +1,7 @@
 #!/bin/bash
 
-devices=(/dev/mtdblock0 /dev/nvme0n1)
+# Accept multiple devices as arguments
+devices=("$@")
 
 for device in "${devices[@]}"; do
   echo "Processing $device"
