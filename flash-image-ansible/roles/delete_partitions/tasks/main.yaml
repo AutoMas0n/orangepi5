@@ -1,33 +1,17 @@
-- name: Delete all partitions from specified devices
+- name: Copy the delete_partitions script to the remote machine
+  become: true
+  copy:
+    src: delete_partitions.sh
+    dest: /usr/local/bin/delete_partitions.sh
+    mode: '0755'
+
+- name: Delete all partitions on specified devices
+  become: true
   shell: |
-    #!/bin/bash
-    set -e # Exit on any error
-    for device in /dev/mtdblock0 /dev/nvme0n1; do
-      part_numbers=$(sudo gdisk "$device" << EOF | awk '/^[[:blank:]]*[0-9]+[[:blank:]]+/{print $1}'
-    p
-    q
-    EOF
-      )
-      
-      if [ -n "$part_numbers" ]; then
-        gdisk_cmds="p"
-        for part_num in $part_numbers; do
-          gdisk_cmds="$gdisk_cmds\nd\n$part_num"
-        done
-        gdisk_cmds="$gdisk_cmds\nw\nY"
-        
-        echo -e "$gdisk_cmds" | sudo gdisk "$device"
-      else
-        echo "No partitions found on $device."
-      fi
-    done    
+    set -o pipefail
+    /usr/local/bin/delete_partitions.sh /dev/mtdblock0 | sudo gdisk /dev/mtdblock0
+    /usr/local/bin/delete_partitions.sh /dev/nvme0n1 | sudo gdisk /dev/nvme0n1
   args:
     executable: /bin/bash
   register: gdisk_output
-  failed_when: gdisk_output.rc != 0
-
-- name: Output result of deletion task
-  debug:
-    msg:
-      - "STDOUT: {{ gdisk_output.stdout_lines }}"
-      - "STDERR: {{ gdisk_output.stderr_lines }}"  
+  failed_when: gdisk_output.rc != 0 and ("Cancelled" not in gdisk_output.stderr)
