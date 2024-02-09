@@ -1,12 +1,12 @@
-- name: Copy the flash_firmware script to the remote machine
+- name: Copy the rkspi_loader.img
   become: true
   copy:
-    src: flash_firmware.sh
-    dest: /usr/local/bin/flash_firmware.sh
+    src: rkspi_loader.img
+    dest: /tmp/rkspi_loader.img
     mode: '0755'
 
-- name: flash firmware with orangepi-onfig
+- name: flash /dev/mtdblock0 with rkspi_loader.img
   become: true
-  shell: "/usr/local/bin/flash_firmware.sh"
+  shell: "dd if=~/tmp/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc"
   args:
     executable: /bin/bash

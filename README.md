@@ -1,5 +1,6 @@
 - [Orange pi 5 Media Box](#orange-pi-5-media-box)
   - [Copy a test script](#copy-a-test-script)
+  - [REPLACE ORANGEPI-CONFIG](#replace-orangepi-config)
   - [Getting a new image](#getting-a-new-image)
   - [initial setup](#initial-setup)
     - [Delete partitions](#delete-partitions)
@@ -26,6 +27,11 @@ https://www.crosstalksolutions.com/orange-pi-5-simple-overview-and-installation-
 scp ~/Downloads/test.sh orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/test.sh /home/orangepi/Downloads/'
 ```
 
+## REPLACE ORANGEPI-CONFIG
+```bash
+sudo dd if=/lib/u-boot-orangepi-rk3588/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc
+```
+
 ## Getting a new image
 ```bash
 #Whats the IP of the pi? Hostname -I
@@ -34,6 +40,9 @@ scp ~/Downloads/test.sh orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.
 unxz ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img.xz
 #remember, orangepi
 scp ~/Downloads/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img /home/orangepi/Downloads/'
+
+# rkspi_loader, for flashing firmware
+scp ~/Downloads/flash_mtdblock0/rkspi_loader.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/rkspi_loader.img /home/orangepi/Downloads/'
 ```
 
 ## initial setup
@@ -104,7 +113,9 @@ echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/mtdblock0 && echo -e "p
 ### Get image into Downloads to flash nvme
 ```bash
 echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/mtdblock0 && echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/nvme0n1
-cd /home/orangepi/Downloads && ls -lah && sudo dd bs=1M if=ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img of=/dev/nvme0n1 status=progress && sudo orangepi-config #apply option 7 for installs!
+cd /home/orangepi/Downloads && ls -lah && sudo dd bs=1M if=ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img of=/dev/nvme0n1 status=progress 
+# sudo orangepi-config #apply option 7 for installs!
+sudo dd if=~/Downloads/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc # instead
 sudo shutdown -h now # REMOVE SDCARD THEN POWER UP WITH BUTTON
 ```
 
