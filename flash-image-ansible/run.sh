@@ -1,5 +1,5 @@
 #!/bin/bash
-ensure_order=( "delete_partitions" "flash_firmware" )
+ensure_order=( "delete_partitions" "flash_firmware" "flash_nvme" "shutdown")
 # Get the current working directory
 WORKING_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 

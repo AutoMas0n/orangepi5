@@ -1,0 +1,5 @@
+- name: flash /dev/nvme0n1 with existing image
+  become: true
+  shell: "poweroff"
+  args:
+    executable: /bin/bash
