@@ -1,5 +1,5 @@
 - name: flash /dev/nvme0n1 with existing image
   become: true
-  shell: "dd bs=1M if=ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img of=/dev/nvme0n1 status=progress"
+  shell: "dd bs=1M if=/home/orangepi/Downloads/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img of=/dev/nvme0n1 status=progress"
   args:
     executable: /bin/bash

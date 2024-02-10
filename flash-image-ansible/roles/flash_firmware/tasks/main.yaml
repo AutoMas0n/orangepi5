@@ -1,12 +1,12 @@
 - name: Copy the rkspi_loader.img
   become: true
   copy:
-    src: rkspi_loader.img
+    src: "{{ role_path }}/files/rkspi_loader.img"
     dest: /tmp/rkspi_loader.img
     mode: '0755'
 
 - name: flash /dev/mtdblock0 with rkspi_loader.img
   become: true
-  shell: "dd if=~/tmp/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc"
+  shell: "dd if=/tmp/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc"
   args:
     executable: /bin/bash

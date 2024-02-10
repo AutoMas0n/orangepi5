@@ -12,9 +12,10 @@ mount --bind /proc /mnt/ubuntu-img/proc
 mount --bind /sys /mnt/ubuntu-img/sys
 apt-get install qemu-user-static
 cp /usr/bin/qemu-aarch64-static /mnt/ubuntu-img/usr/bin
-chroot /mnt/ubuntu-img /bin/bash <<EOF
-# Your commands here
-useradd test
-echo "orangepi:orangepi" | chpasswd
-# ...
+chroot /mnt/ubuntu-img /usr/bin/qemu-aarch64-static /bin/bash <<EOF
+echo -e "orangepi\norangepi" | passwd orangepi
+touch /etc/sudoers.d/orangepi
+echo "orangepi ALL=(ALL:ALL) ALL" | tee /etc/sudoers.d/orangepi
+chmod 0440 /etc/sudoers.d/orangepi
 EOF
+./unmount.sh

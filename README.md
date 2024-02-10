@@ -41,6 +41,8 @@ unxz ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img.xz
 #remember, orangepi
 scp ~/Downloads/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img /home/orangepi/Downloads/'
 
+scp ~/Downloads/custom_ubuntu/ubuntu-22.04.3-custom-arm64-orangepi-5.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img /home/orangepi/Downloads/'
+
 # rkspi_loader, for flashing firmware
 scp ~/Downloads/flash_mtdblock0/rkspi_loader.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/rkspi_loader.img /home/orangepi/Downloads/'
 ```
