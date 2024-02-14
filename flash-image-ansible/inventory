@@ -1,2 +1,2 @@
 # inventory for setup of new orangepi
-192.168.2.213 ansible_connection=ssh ansible_ssh_user=orangepi ansible_ssh_pass=orangepi ansible_become=true ansible_become_method=sudo ansible_become_pass=orangepi
+192.168.2.210 ansible_connection=ssh ansible_ssh_user=orangepi ansible_ssh_pass=orangepi ansible_become=true ansible_become_method=sudo ansible_become_pass=orangepi

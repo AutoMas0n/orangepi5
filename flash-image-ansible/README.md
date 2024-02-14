@@ -1,13 +1,13 @@
 To run:
 ```bash
 export SSH_USER=orangepi SSH_PASS=orangepi
-sudo -E ./run.sh 192.168.2.213
+sudo -E ./run.sh 192.168.2.210
 ```
 
 or with roles
 ```bash
 export SSH_USER=orangepi SSH_PASS=orangepi
-sudo -E ./run.sh 192.168.2.213 my_ip
+sudo -E ./run.sh 192.168.2.210 my_ip
 ```
 
 ## Info

@@ -18,13 +18,14 @@
   - [Firefox](#firefox-1)
 - [TODO](#todo)
   - [Reference diagram](#reference-diagram)
+  - [backup \& flashing](#backup--flashing)
 
 # Orange pi 5 Media Box
 https://www.crosstalksolutions.com/orange-pi-5-simple-overview-and-installation-with-m-2-ssd/
 
 ## Copy a test script
 ```bash
-scp ~/Downloads/test.sh orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/test.sh /home/orangepi/Downloads/'
+scp ~/Downloads/test.sh orangepi@192.168.2.210:/tmp/ && ssh -t orangepi@192.168.2.210 'echo orangepi | sudo -S mv /tmp/test.sh /home/orangepi/Downloads/'
 ```
 
 ## REPLACE ORANGEPI-CONFIG
@@ -39,12 +40,16 @@ sudo dd if=/lib/u-boot-orangepi-rk3588/rkspi_loader.img of=/dev/mtdblock0 conv=n
 #unxz
 unxz ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img.xz
 #remember, orangepi
-scp ~/Downloads/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img /home/orangepi/Downloads/'
+scp ~/Downloads/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img orangepi@192.168.2.210:/tmp/ && ssh -t orangepi@192.168.2.210 'echo orangepi | sudo -S mv /tmp/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img /home/orangepi/Downloads/'
 
-scp ~/Downloads/custom_ubuntu/ubuntu-22.04.3-custom-arm64-orangepi-5.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img /home/orangepi/Downloads/'
+sudo su - root
+export SSHPASS='orangepi'
+sshpass -e ssh -t root@192.168.2.210 'mount -o remount,size=10G /tmp && echo $SSHPASS | rm -rf /tmp/* && rm -rf /home/orangepi/Downloads/*' && sshpass -e scp /home/jesse/Downloads/custom_ubuntu/ubuntu-22.04.3-custom-arm64-orangepi-5.img root@192.168.2.210:/tmp/ && sshpass -e ssh -t root@192.168.2.210 'echo $SSHPASS | sudo -S mv /tmp/ubuntu-22.04.3-custom-arm64-orangepi-5.img /home/orangepi/Downloads/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img'
+
+ssh -t orangepi@192.168.2.210 'sudo rm /tmp/ubuntu-22.04.3-custom-arm64-orangepi-5.img && sudo rm /home/orangepi/Downloads/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img' && scp ~/Downloads/custom_ubuntu/ubuntu-22.04.3-custom-arm64-orangepi-5.img orangepi@192.168.2.210:/tmp/ && ssh -t orangepi@192.168.2.210 'echo orangepi | sudo -S mv /tmp/ubuntu-22.04.3-preinstalled-desktop-arm64-orangepi-5.img /home/orangepi/Downloads/'
 
 # rkspi_loader, for flashing firmware
-scp ~/Downloads/flash_mtdblock0/rkspi_loader.img orangepi@192.168.2.213:/tmp/ && ssh -t orangepi@192.168.2.213 'echo orangepi | sudo -S mv /tmp/rkspi_loader.img /home/orangepi/Downloads/'
+scp ~/Downloads/flash_mtdblock0/rkspi_loader.img orangepi@192.168.2.210:/tmp/ && ssh -t orangepi@192.168.2.210 'echo orangepi | sudo -S mv /tmp/rkspi_loader.img /home/orangepi/Downloads/'
 ```
 
 ## initial setup
@@ -281,3 +286,12 @@ sudo apt install firefox-esr
 
 ## Reference diagram
 https://lemmy.ml/pictrs/image/ddc4c780-8776-4c4a-a344-1a571eeb8b12.webp
+
+## backup & flashing
+
+```bash
+sudo dd if=/dev/mmcblk0 of=/home/jesse/orangepi-configurator.img status=progress
+
+sudo dd if=<input file/iso that you want to flash> of=<output file/device you want to flash it to> bs=4M (this works the best in my practice) status=progress 
+
+sudo dd if=/home/jesse/orangepi-configurator.img of=/dev/mmcblk0 bs=4M  status=progress 

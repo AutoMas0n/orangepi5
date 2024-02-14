@@ -1763,3 +1763,12 @@ To resolve this:
    ```
 
 Make sure you are using the correct QEMU static binary that matches the architecture of the image you're trying to modify. If the image is for ARMhf (32-bit), use `qemu-arm-static`; if it's for ARM64 (aarch64), use `qemu-aarch64-static`.
+
+---
+root@pop-os:/# ls -lrt /usr/sbin/ | grep oem
+-rwxr-xr-x 1 root root      1096 May  2  2018 oem-config-wrapper
+-rwxr-xr-x 1 root root      1520 Dec  7  2018 oem-config-prepare
+-rwxr-xr-x 1 root root      1256 Apr 14  2023 oem-config-remove
+-rwxr-xr-x 1 root root      4648 Apr 14  2023 oem-config-firstboot
+-rwxr-xr-x 1 root root      2781 Jun  5  2023 oem-config-remove-gtk
+lrwxrwxrwx 1 root root        28 Jun  5  2023 oem-config -> ../lib/ubiquity/bin/ubiquity
