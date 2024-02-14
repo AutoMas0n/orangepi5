@@ -88,6 +88,8 @@ ubiquity ubiquity/success_command \
            ifup enp2s0; \
            apt-get update -y; \
            in-target apt-get install -y openssh-server;">/ks.preseed
+
+           
 sudo mkdir -p /etc/skel/.config
 printf yes | sudo tee /etc/skel/.config/gnome-initial-setup-done >/dev/null
 
