@@ -13,6 +13,12 @@ mount --bind /sys /mnt/ubuntu-img/sys
 apt-get install qemu-user-static -y
 cp /usr/bin/qemu-aarch64-static /mnt/ubuntu-img/usr/bin
 chroot /mnt/ubuntu-img /usr/bin/qemu-aarch64-static /bin/bash <<EOF
+useradd -p $(openssl passwd -1 orangepi) orangepi
+touch /etc/sudoers.d/orangepi
+echo "orangepi ALL=(ALL:ALL) ALL" | tee /etc/sudoers.d/orangepi
+chmod 0440 /etc/sudoers.d/orangepi
+echo orangepi:orangepi | chpasswd
+
 mkdir /isolinux
 echo "
 default live-install
@@ -79,15 +85,15 @@ d-i grub-installer/bootdev  string /dev/sda
 #d-i grub-installer/bootdev  string default
 d-i grub-installer/grub2_instead_of_grub_legacy boolean true
 d-i grub-installer/only_debian boolean true
-d-i finish-install/reboot_in_progress note
+d-i finish-install/reboot_in_progress note">/ks.preseed
 
-# Custom Commands (ssh access on install - change network device name as applicable)
-ubiquity ubiquity/success_command \
-    string echo "auto enp2s0" >> /etc/network/interfaces; \
-           echo "iface enp2s0 inet dhcp" >> /etc/network/interfaces; \
-           ifup enp2s0; \
-           apt-get update -y; \
-           in-target apt-get install -y openssh-server;">/ks.preseed
+# # Custom Commands (ssh access on install - change network device name as applicable)
+# ubiquity ubiquity/success_command \
+#     string echo "auto enp2s0" >> /etc/network/interfaces; \
+#            echo "iface enp2s0 inet dhcp" >> /etc/network/interfaces; \
+#            ifup enp2s0; \
+#            apt-get update -y; \
+#            in-target apt-get install -y openssh-server;"
 
            
 sudo mkdir -p /etc/skel/.config
