@@ -15,11 +15,13 @@ apt-get install qemu-user-static -y
 cp /usr/bin/qemu-aarch64-static $MOUNT_POINT/usr/bin
 
 chroot /mnt/ubuntu-img /usr/bin/qemu-aarch64-static /bin/bash <<EOF
-useradd -p $(openssl passwd -1 orangepi) orangepi
 touch /etc/sudoers.d/orangepi
 echo "orangepi ALL=(ALL:ALL) ALL" | tee /etc/sudoers.d/orangepi
+useradd -p $(openssl passwd -1 orangepi) orangepi
 chmod 0440 /etc/sudoers.d/orangepi
 echo orangepi:orangepi | chpasswd
+chown orangepi:orangepi /home/orangepi
+sudo chmod 750 /home/orangepi
 
 systemctl disable oem-config.service
 systemctl disable oem-config.target
@@ -30,8 +32,6 @@ systemctl list-unit-files | grep oem-config
 #Remove startup wizard
 rm -rf /var/lib/oem-config
 apt-get remove -y oem-config-gtk ubiquity-frontend-gtk ubiquity-slideshow-ubuntu
-# apt-get purge -y oem-config-gtk ubiquity-frontend-gtk ubiquity-slideshow-ubuntu
-# apt-get update && apt-get purge -y oem-config-gtk ubiquity-frontend-gtk ubiquity-slideshow-ubuntu && apt-get autoremove -y && apt-get upgrade -y
 
 #Remove startup popup for gnome-initial-setup
 mkdir -p /etc/skel/.config

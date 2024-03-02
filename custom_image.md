@@ -2,6 +2,7 @@
 - [Custom ubuntu image](#custom-ubuntu-image)
 - [Correction of partitions](#correction-of-partitions)
 - [qemu apt install for arm compatibility on x86](#qemu-apt-install-for-arm-compatibility-on-x86)
+- [lrwxrwxrwx 1 root root        28 Jun  5  2023 oem-config -\> ../lib/ubiquity/bin/ubiquity](#lrwxrwxrwx-1-root-root--------28-jun--5--2023-oem-config---libubiquitybinubiquity)
 
 The `system_update` role you provided is designed to update the package index and then upgrade all packages, including the distribution. Running a distribution upgrade (`dist-upgrade` or `full-upgrade`) can potentially upgrade essential system components, which might lead to system instability or compatibility issues, especially on new or less common hardware like the Orange Pi 5.
 
@@ -1772,3 +1773,8 @@ root@pop-os:/# ls -lrt /usr/sbin/ | grep oem
 -rwxr-xr-x 1 root root      4648 Apr 14  2023 oem-config-firstboot
 -rwxr-xr-x 1 root root      2781 Jun  5  2023 oem-config-remove-gtk
 lrwxrwxrwx 1 root root        28 Jun  5  2023 oem-config -> ../lib/ubiquity/bin/ubiquity
+---
+
+/lib/ubiquity/ubiquity/frontend/gtk_ui.py
+
+initrd
