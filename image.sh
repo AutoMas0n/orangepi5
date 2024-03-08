@@ -18,9 +18,11 @@ chroot /mnt/ubuntu-img /usr/bin/qemu-aarch64-static /bin/bash <<EOF
 touch /etc/sudoers.d/orangepi
 echo "orangepi ALL=(ALL:ALL) ALL" | tee /etc/sudoers.d/orangepi
 useradd -p $(openssl passwd -1 orangepi) -s /bin/bash orangepi
+echo "orangepi ALL=(ALL:ALL) ALL" | tee /etc/sudoers.d/orangepi # TODO FIGURE OUT ORDER
 usermod -a -G sudo,video,adm,dialout,cdrom,audio,plugdev,netdev,input,bluetooth orangepi
 chmod 0440 /etc/sudoers.d/orangepi
 echo orangepi:orangepi | chpasswd
+mkdir /home/orangepi
 chown orangepi:orangepi /home/orangepi
 sudo chmod 750 /home/orangepi
 
