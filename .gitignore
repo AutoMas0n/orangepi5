@@ -1,0 +1,5 @@
+data/
+secrets
+settings.json
+manual-connections/
+wg0.conf
