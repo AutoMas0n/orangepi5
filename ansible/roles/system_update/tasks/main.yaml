@@ -1,0 +1,12 @@
+- name: Update APT package index
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600  # Optional: cache valid for 1 hour to avoid repeated updates
+  become: true
+
+- name: Upgrade all APT packages safely
+  apt:
+    upgrade: safe
+    autoremove: yes
+    autoclean: yes
+  become: true

@@ -1,0 +1,23 @@
+- name: Add the Mozilla Team PPA
+  apt_repository:
+    repo: ppa:mozillateam/ppa
+    state: present
+  become: true
+  tags:
+    - package_install
+
+- name: Install APT packages
+  apt:
+    name:
+      - ansible
+      - firefox-esr # ppa:mozillateam/ppa
+      - flatpak
+      - gnome-software-plugin-flatpak
+      - kdeconnect
+      - git
+      - vlc
+      - docker-compose
+    state: present
+    update_cache: yes
+  become: true
+  tags: package_install  

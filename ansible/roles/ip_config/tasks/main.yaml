@@ -1,0 +1,44 @@
+- name: Gather facts about the current IP address
+  ansible.builtin.shell: hostname -I | awk '{print $1}'
+  register: current_ip
+  changed_when: false
+
+- name: Gather facts about the current default gateway
+  ansible.builtin.shell: ip route show default | awk '/default/ {print $3}'
+  register: current_gateway
+  changed_when: false
+
+- name: Set facts for the current IP address and gateway
+  ansible.builtin.set_fact:
+    static_ip: "{{ current_ip.stdout }}"
+    gateway_ip: "{{ current_gateway.stdout }}"
+
+- name: Ensure netplan is installed (Ubuntu 18.04+)
+  ansible.builtin.apt:
+    name: netplan.io
+    state: present
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_major_version | int >= 18
+
+- name: Configure static IP address with the current IP and gateway
+  template:
+    src: static_ip.yaml.j2
+    dest: /etc/netplan/01-netcfg.yaml
+  register: netplan_configuration
+
+- name: Set correct permissions for the Netplan configuration
+  ansible.builtin.file:
+    path: /etc/netplan/01-netcfg.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  when: netplan_configuration.changed
+  
+- name: Apply the netplan configuration
+  command: netplan apply
+  when: netplan_configuration.changed
+
+- name: Ensure networking is restarted to apply IP if netplan is not present
+  ansible.builtin.service:
+    name: networking
+    state: restarted
+  when: not netplan_configuration.changed

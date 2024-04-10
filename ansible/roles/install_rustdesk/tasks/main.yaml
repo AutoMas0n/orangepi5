@@ -1,0 +1,19 @@
+- name: Check if rustdesk is already installed
+  command: dpkg-query -W -f='${Status}' rustdesk
+  register: rustdesk_installed
+  changed_when: "'install ok installed' not in rustdesk_installed.stdout"
+  ignore_errors: true
+  tags: 'install_rustdesk' 
+
+- name: Download rustdesk deb package
+  get_url:
+    url: https://github.com/rustdesk/rustdesk/releases/download/1.2.3/rustdesk-1.2.3-aarch64.deb
+    dest: "/tmp/rustdesk-1.2.3-aarch64.deb"
+  when: rustdesk_installed is failed or 'install ok installed' not in rustdesk_installed.stdout
+  tags: 'install_rustdesk'   
+
+- name: Install rustdesk deb package
+  apt:
+    deb: "/tmp/rustdesk-1.2.3-aarch64.deb"
+  when: rustdesk_installed is failed or 'install ok installed' not in rustdesk_installed.stdout
+  tags: 'install_rustdesk'  

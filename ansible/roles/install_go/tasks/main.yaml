@@ -1,0 +1,49 @@
+- name: Check if Go is already installed
+  command: /usr/local/go/bin/go version
+  register: go_version_result
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+
+- name: Remove any existing Go installation
+  file:
+    path: /usr/local/go
+    state: absent
+  when: go_version_result.stdout is not defined or 'go1.21.6' not in go_version_result.stdout | default('')
+
+- name: Download Go tarball
+  get_url:
+    url: https://go.dev/dl/go1.21.6.linux-arm64.tar.gz
+    dest: /tmp/go1.21.6.linux-arm64.tar.gz
+    mode: '0644'
+  when: go_version_result.stdout is not defined or 'go1.21.6' not in go_version_result.stdout | default('')
+
+- name: Extract Go tarball to /usr/local
+  unarchive:
+    src: /tmp/go1.21.6.linux-arm64.tar.gz
+    dest: /usr/local
+    remote_src: "{{ 'true' if inventory_hostname != 'localhost' else 'false' }}"
+    creates: /usr/local/go/bin/go
+  when: go_version_result.stdout is not defined or 'go1.21.6' not in go_version_result.stdout | default('')
+
+- name: Add Go to the PATH in /etc/profile
+  lineinfile:
+    path: /etc/profile
+    line: 'export PATH=$PATH:/usr/local/go/bin'
+    create: true
+    state: present
+  when: go_version_result.stdout is not defined or 'go1.21.6' not in go_version_result.stdout | default('')
+
+- name: Apply profile changes if /etc/profile is updated
+  shell: source /etc/profile
+  args:
+    executable: /bin/bash
+  when: ansible_os_family == 'Debian' and (go_version_result.stdout is not defined or 'go1.21.6' not in go_version_result.stdout | default(''))
+  ignore_errors: true
+
+- name: Verify Go installation
+  command: /usr/local/go/bin/go version
+  register: go_version_verification
+  changed_when: false
+  failed_when: "'go version go1.21.6' not in go_version_verification.stdout"
+  when: go_version_result.stdout is not defined or 'go1.21.6' not in go_version_result.stdout | default('')

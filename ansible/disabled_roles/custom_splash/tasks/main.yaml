@@ -1,0 +1,48 @@
+- name: Install the necessary Plymouth theme tools
+  apt:
+    name: plymouth-themes
+    update_cache: yes
+    state: present
+
+- name: Create a directory for the custom splash
+  file:
+    path: /usr/share/plymouth/themes/mycustomsplash
+    state: directory
+    mode: '0755'
+
+- name: Copy the custom image to the theme directory
+  copy:
+    src: OOiKvl45mUmX_2000_1000.png
+    dest: /usr/share/plymouth/themes/mycustomsplash/OOiKvl45mUmX_2000_1000.png
+    mode: '0644'
+
+- name: Set up the Plymouth theme configuration
+  copy:
+    content: |
+      [Plymouth Theme]
+      Name=Custom Splash
+      Description=A custom splash screen
+      ModuleName=script
+
+      [script]
+      ImageDir=/usr/share/plymouth/themes/mycustomsplash
+      ScriptFile=/usr/share/plymouth/themes/mycustomsplash/mycustomsplash.script
+    dest: /usr/share/plymouth/themes/mycustomsplash/mycustomsplash.plymouth
+    mode: '0644'
+
+- name: Add script file for the custom theme
+  copy:
+    content: |
+      #!/bin/sh
+      wall_image=OOiKvl45mUmX_2000_1000.png
+      screen_width=$(plymouth get-splash-plugin-option --key=screen-width)
+      screen_height=$(plymouth get-splash-plugin-option --key=screen-height)
+      plymouth.set-wallpaper --stretch $wall_image
+    dest: /usr/share/plymouth/themes/mycustomsplash/mycustomsplash.script
+    mode: '0755'
+
+- name: Update the Plymouth theme
+  command: plymouth-set-default-theme -R mycustomsplash
+
+- name: Update initramfs to apply the changes
+  command: update-initramfs -u

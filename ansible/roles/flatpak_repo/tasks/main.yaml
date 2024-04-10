@@ -1,0 +1,14 @@
+- name: Add Flathub repository
+  ansible.builtin.command:
+    cmd: flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  become: true
+  args:
+    creates: /var/lib/flatpak/repo/flathub.flatpakrepo
+  tags: flatpak
+
+- name: Install Delfin via Flatpak
+  ansible.builtin.command:
+    cmd: flatpak install -y flathub cafe.avery.Delfin
+  args:
+    creates: /var/lib/flatpak/app/cafe.avery.Delfin
+  tags: flatpak 

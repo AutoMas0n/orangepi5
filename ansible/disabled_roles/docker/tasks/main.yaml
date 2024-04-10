@@ -1,0 +1,9 @@
+- name: Download docker bash auto complete
+  get_url:
+       url: https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker
+       dest: "/etc/bash_completion.d/docker"
+       mode: 0644
+       group: "root"
+       owner: "root"
+  become: true
+  tags: docker

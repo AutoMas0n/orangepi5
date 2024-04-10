@@ -1,0 +1,123 @@
+# code: language=ansible
+---
+- name: Converge
+  hosts: all
+
+  pre_tasks:
+    - name: Create test users
+      become: true
+      ansible.builtin.user:
+        name: '{{ item }}'
+        state: present
+        home: '/home/{{ item }}'
+        createhome: true
+      with_items:
+        - test_usr
+        - test_usr2
+        - test_usr3
+        - test_usr4
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+      changed_when: false
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Create settings directory
+      become: true
+      become_user: test_usr4
+      ansible.builtin.file:
+        path: /home/test_usr4/.config/Code/User
+        state: directory
+        mode: 'u=rwx,go='
+
+    - name: Install default settings
+      become: true
+      become_user: test_usr4
+      ansible.builtin.copy:
+        content: '{"remove_me": true}'
+        dest: /home/test_usr4/.config/Code/User/settings.json
+        force: false
+        mode: 'u=rw,go='
+
+    - name: Install default key bindings
+      become: true
+      become_user: test_usr4
+      ansible.builtin.copy:
+        content: '[{"key":"ctrl+r","command": "remove_me"}]'
+        dest: /home/test_usr4/.config/Code/User/keybindings.json
+        force: false
+        mode: 'u=rw,go='
+
+  roles:
+    - role: ansible-role-visual-studio-code
+      users:
+        - username: test_usr
+          visual_studio_code_extensions:
+            - ms-python.python
+            - wholroyd.jinja
+          visual_studio_code_settings: {
+            "editor.rulers": [80, 100, 120],
+            "editor.renderWhitespace": true,
+            "files.associations": {
+              "Vagrantfile": "ruby"
+            }
+          }
+          visual_studio_code_keybindings: [
+            {
+              "key":     "ctrl+'",
+              "command": "workbench.action.terminal.focus"
+            },
+            {
+              "key":     "ctrl+'",
+              "command": "workbench.action.focusActiveEditorGroup",
+              "when":    "terminalFocus"
+            }
+          ]
+        - username: test_usr2
+          visual_studio_code_extensions: []
+          visual_studio_code_settings: {}
+          visual_studio_code_keybindings: []
+        - username: test_usr3
+        - username: test_usr4
+          visual_studio_code_settings: {}
+          visual_studio_code_settings_overwrite: true
+          visual_studio_code_keybindings: []
+          visual_studio_code_keybindings_overwrite: true
+    - role: ansible-role-visual-studio-code
+      visual_studio_code_build: 'insiders'
+      users:
+        - username: test_usr
+          visual_studio_code_extensions:
+            - ms-python.python
+            - wholroyd.jinja
+          visual_studio_code_settings: {
+            "editor.rulers": [80, 100, 120],
+            "editor.renderWhitespace": true,
+            "files.associations": {
+              "Vagrantfile": "ruby"
+            }
+          }
+          visual_studio_code_keybindings: [
+            {
+              "key":     "ctrl+'",
+              "command": "workbench.action.terminal.focus"
+            },
+            {
+              "key":     "ctrl+'",
+              "command": "workbench.action.focusActiveEditorGroup",
+              "when":    "terminalFocus"
+            }
+          ]
+        - username: test_usr2
+          visual_studio_code_extensions: []
+          visual_studio_code_settings: {}
+          visual_studio_code_keybindings: []
+        - username: test_usr3
+
+  post_tasks:
+    - name: Install which
+      ansible.builtin.package:
+        name: which
+        state: present
+      when: ansible_pkg_mgr in ('yum', 'dnf', 'zypper')
