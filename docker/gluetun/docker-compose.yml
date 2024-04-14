@@ -14,22 +14,14 @@ services:
       - 8388:8388/tcp # Shadowsocks
       - 8388:8388/udp # Shadowsocks
     volumes:
-      # - /yourpath:/gluetun
       # TODO, THIS SHOULD BE AN ENV that is loaded dynamically
-      - /home/jesse/Github/orangepi5/wg0.conf:/gluetun/wireguard/wg0.conf
+      - /home/orangepi/Github/orangepi5/wg0.conf:/gluetun/wireguard/wg0.conf:ro
     environment:
       # See https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
       - VPN_SERVICE_PROVIDER=custom #using wg0.conf generated from golang
       - VPN_TYPE=wireguard
-      # OpenVPN:
-      - OPENVPN_USER=${PIA_USER}
-      - OPENVPN_PASSWORD=${PIA_PASS}
-      # Wireguard:
-      # - WIREGUARD_PRIVATE_KEY=wOEI9rqqbDwnN8/Bpp22sVz48T71vJ4fYmFWujulwUU=
-      # - WIREGUARD_ADDRESSES=10.64.222.21/32
       # Timezone for accurate log times
       - TZ=
       # Server list updater
       # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
       - UPDATER_PERIOD=
-      # - SERVER_REGIONS=ca toronto
