@@ -40,7 +40,7 @@ Make sure to create the configuration directory and the `qBittorrent.conf` file 
 To deploy this container, save the `docker-compose.yml` file and run:
 
 ```bash
-docker-compose up -d
+sudo docker-compose up -d
 ```
 
 You can also set additional qBittorrent settings through environment variables provided by the Docker image you are using. Check the documentation for the specific qBittorrent Docker image you choose for any additional environment variables that can be set for further customization.
