@@ -1,5 +1,23 @@
 ---
 services:
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    environment:
+      - PUID=30000
+      - PGID=30000
+      - TZ=Etc/UTC
+      - AUTO_UPDATE=true #optional
+    # - UMASK_SET=022
+      - RUN_OPTS= #optional
+    volumes:
+      - ${QBIT_CONFIG_PATH}:/config
+      - ${DOWNLOADS_PATH}:/downloads
+    ports:
+      - 9117:9117
+    restart: unless-stopped
+    networks:
+      - torrent
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
@@ -11,8 +29,14 @@ services:
     volumes:
       - ${QBIT_CONFIG_PATH}:/config
       - ${DOWNLOADS_PATH}:/downloads
+      - "./qbittorent/data-qBittorrent:/config/data/qBittorrent"
     ports:
       - 8080:8080
       - 6881:6881
       - 6881:6881/udp
     restart: unless-stopped
+    networks:
+      - torrent    
+
+networks:
+  torrent:    
