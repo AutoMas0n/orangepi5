@@ -1,5 +1,28 @@
 ---
+version: "3"
 services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 8888:8888/tcp # HTTP proxy
+      - 8388:8388/tcp # Shadowsocks
+      - 8388:8388/udp # Shadowsocks
+      - 9117:9117      # Jackett
+      - 8080:8080      # qBittorrent WebUI
+      - 6881:6881      # qBittorrent TCP
+      - 6881:6881/udp  # qBittorrent UDP
+    volumes:
+      - /home/orangepi/Github/orangepi5/wg0.conf:/gluetun/wireguard/wg0.conf:ro
+    environment:
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - TZ=
+      - UPDATER_PERIOD=
   jackett:
     image: lscr.io/linuxserver/jackett:latest
     container_name: jackett
@@ -7,17 +30,13 @@ services:
       - PUID=30000
       - PGID=30000
       - TZ=Etc/UTC
-      - AUTO_UPDATE=true #optional
-    # - UMASK_SET=022
-      - RUN_OPTS= #optional
+      - AUTO_UPDATE=true
+      - RUN_OPTS=
     volumes:
       - ${QBIT_CONFIG_PATH}:/config
       - ${DOWNLOADS_PATH}:/downloads
-    ports:
-      - 9117:9117
     restart: unless-stopped
-    networks:
-      - torrent
+    network_mode: "service:gluetun"
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
@@ -30,13 +49,5 @@ services:
       - ${QBIT_CONFIG_PATH}:/config
       - ${DOWNLOADS_PATH}:/downloads
       - "./qbittorent/data-qBittorrent:/config/data/qBittorrent"
-    ports:
-      - 8080:8080
-      - 6881:6881
-      - 6881:6881/udp
     restart: unless-stopped
-    networks:
-      - torrent    
-
-networks:
-  torrent:    
+    network_mode: "service:gluetun"
