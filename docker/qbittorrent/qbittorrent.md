@@ -78,3 +78,11 @@ Jackett: api key error! Right-click this row and select 'Open description page' 
     "thread_count": 20
 }
 ```
+
+```bash
+sudo docker exec -u root -it qbittorrent /bin/sh
+```
+
+```bash
+sudo docker run --name qbittorrent2 --user root --entrypoint /bin/sh -it lscr.io/linuxserver/qbittorrent:latest
+```

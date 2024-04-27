@@ -48,6 +48,7 @@ services:
     volumes:
       - ${QBIT_CONFIG_PATH}:/config
       - ${DOWNLOADS_PATH}:/downloads
-      - "./qbittorent/data-qBittorrent:/config/data/qBittorrent"
+      - /home/orangepi/Github/orangepi5/docker/qbittorrent/qBittorrent-data.conf:/config/qBittorrent/qBittorrent-data.conf:rw
+      - ${DOWNLOADS_PATH}/jackett.json:/config/qBittorrent/nova3/engines/jackett.json:rw
     restart: unless-stopped
     network_mode: "service:gluetun"
