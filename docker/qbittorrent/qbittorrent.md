@@ -14,7 +14,6 @@ services:
       - TZ=Europe/London # Replace with your timezone
       - UMASK_SET=022 # Optional: Set permissions for newly created files
       - WEBUI_PORT=8080 # Optional: Set the port for the web interface
-      - WebUI_Password_PBKDF2="@ByteArray(ARQ77eY1NUZaQsuDHbIMCA==:0WMRkYTUWVT9wVvdDtHAjU9b3b7uB8NR1Gur2hmQCvCDpm39Q+PsJRJPaCU51dEiz+dTzh8qbPsL8WkFljQYFQ==)"
     volumes:
       - /path/to/config:/config # Replace with the path to your qBittorrent config files
       - /path/to/downloads:/downloads # Replace with the path to your download folder
