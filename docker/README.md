@@ -13,3 +13,10 @@ cat ./id_ed25519.pub
 
 On client & server, use sudo to change the settings to include 
 ID Server: `192.168.2.155` Relay Server: `192.168.2.155` Key : ywCjf1fDg**********
+
+
+# TODO DOCKER PULL
+sudo docker pull qmcgaw/gluetun
+sudo docker pull lscr.io/linuxserver/jackett
+sudo docker pull lscr.io/linuxserver/qbittorrent
+sudo docker pull lscr.io/linuxserver/jellyfin
