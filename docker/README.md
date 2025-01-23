@@ -1,3 +1,10 @@
+TODO C<roNtAB
+```bash
+sudo crontab -l
+0 3 * * * cd ~/Github/orangepi5/docker && sudo ./run.sh
+0 0 * * * /home/orangepi/Github/orangepi5/docker/docker_pull.sh
+```
+
 ```bash
 sudo docker run --name hbbr -v ./data:/root -td --net=host rustdesk/rustdesk-server hbbr
 ```
