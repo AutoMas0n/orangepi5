@@ -59,10 +59,6 @@ services:
   stremio:
     image: stremio/server:latest
     container_name: stremio
-    ports:
-      - 11470:11470 # Stremio HTTP
-    volumes:
-      - /path/to/stremio/config:/config
     environment:
       - PUID=30000
       - PGID=30000
