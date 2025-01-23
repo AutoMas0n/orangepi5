@@ -63,5 +63,6 @@ remove_docker_container gluetun
 # Restart qBittorrent if it's already running
 restart_docker_compose ../qbittorrent qbittorrent
 restart_docker_compose ../qbittorrent jackett
+restart_docker_compose ../qbittorrent stremio
 # Restart Jellyfin if it's already running
 restart_docker_compose ../jellyfin jellyfin
