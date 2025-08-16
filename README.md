@@ -229,7 +229,7 @@ If you want to install a specific version of Kodi, you need to modify the first 
 
 Replace `2:18.9+git20201024.0821-final-0bionic` with the actual version string you want to install.
 
-### THANK GOD SOMEONE DID THIS
+### GOAT
 https://github.com/Joshua-Riek/ubuntu-rockchip
 
 # HOST Apps
