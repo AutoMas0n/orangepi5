@@ -12,7 +12,7 @@
     - [Docker](#docker)
     - [docker jellyfin rockchip](#docker-jellyfin-rockchip)
     - [martin](#martin)
-    - [THANK GOD SOMEONE DID THIS](#thank-god-someone-did-this)
+    - [GOAT](#goat)
 - [HOST Apps](#host-apps)
   - [vs code](#vs-code)
   - [Firefox](#firefox-1)
