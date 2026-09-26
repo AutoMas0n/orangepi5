@@ -6,25 +6,22 @@
 - [ ] 1.2 Verify all Docker containers are healthy and running (jellyfin, qbittorrent, jackett, stremio, gluetun, copyparty)
 - [ ] 1.3 Verify wg0.conf exists and contains valid WireGuard keys (`/home/orangepi/Github/orangepi5/wg0.conf`)
 - [ ] 1.4 Commit and push the migration branch: `git push origin migration/armbian`
-- [ ] 1.5 Back up all gitignored secret files to the backup NVMe:
+- [ ] 1.5 Disable cron jobs that could write data during backup (`crontab -l`, note them for restore)
+- [ ] 1.6 Note current network config (`ip addr`, `ip route`, `resolvectl`) for static IP on Armbian
+- [ ] 1.7 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
+## 2. Backup
+
+- [ ] 2.1 Connect external NVMe via USB-C, verify mount point (e.g. `/mnt/backup-nvme`)
+- [ ] 2.2 Back up gitignored secret files explicitly (belt-and-suspenders — also captured by rsync in 2.3):
      ```bash
      cp ~/Github/orangepi5/secrets /mnt/backup-nvme/secrets.backup
      cp ~/Github/orangepi5/wg0.conf /mnt/backup-nvme/wg0.conf.backup
      ```
-- [ ] 1.6 Disable cron jobs that could write data during backup (`crontab -l`, note them for restore)
-- [ ] 1.7 Note current network config (`ip addr`, `ip route`, `resolvectl`) for static IP on Armbian
-- [ ] 1.8 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
-- [ ] 1.6 Note current network config (`ip addr`, `ip route`, `resolvectl`) for static IP on Armbian
-- [ ] 1.7 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
-
-## 2. Backup
-
-- [ ] 2.1 Connect external NVMe via USB-C, verify mount point (e.g. `/mnt/backup-nvme`)
-- [ ] 2.2 Rsync /home/orangepi to backup NVMe (`rsync -aAXv --info=progress2 /home/orangepi/ /mnt/backup-nvme/home-backup/`)
-- [ ] 2.3 Verify /home backup integrity (`diff -r --brief /home/orangepi/ /mnt/backup-nvme/home-backup/ | grep -v "^Only in"` or file count comparison)
-- [ ] 2.4 Rsync /media to backup NVMe (`rsync -aAXv --info=progress2 /media/ /mnt/backup-nvme/media-backup/`)
-- [ ] 2.5 Verify /media backup integrity
-- [ ] 2.6 Make a note of which running containers need their images saved vs re-pulled (`docker image ls`)
+- [ ] 2.3 Rsync /home/orangepi to backup NVMe (`rsync -aAXv --info=progress2 /home/orangepi/ /mnt/backup-nvme/home-backup/`)
+- [ ] 2.4 Verify /home backup integrity (`diff -r --brief /home/orangepi/ /mnt/backup-nvme/home-backup/ | grep -v "^Only in"` or file count comparison)
+- [ ] 2.5 Rsync /media to backup NVMe (`rsync -aAXv --info=progress2 /media/ /mnt/backup-nvme/media-backup/`)
+- [ ] 2.6 Verify /media backup integrity
+- [ ] 2.7 Make a note of which running containers need their images saved vs re-pulled (`docker image ls`)
 
 ## 3. Download Armbian and Prepare Flash Medium
 
