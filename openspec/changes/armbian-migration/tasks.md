@@ -11,6 +11,8 @@
 - [ ] 1.7 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
 ## 2. Backup
 
+> **👤 Human required**: Plug in the external NVMe via USB-C (2.1). Everything else the agent can run over SSH.
+
 - [ ] 2.1 Connect external NVMe via USB-C, verify mount point (e.g. `/mnt/backup-nvme`)
 - [ ] 2.2 Back up gitignored secret files explicitly (belt-and-suspenders — also captured by rsync in 2.3):
      ```bash
@@ -24,6 +26,10 @@
 - [ ] 2.7 Make a note of which running containers need their images saved vs re-pulled (`docker image ls`)
 
 ## 3. Download Armbian and Prepare Flash Medium
+
+> **👤 Human required**: Tasks 3.3–3.8 require physical access to the Orange Pi 5.
+> The agent can download the image and verify it, but writing to SD, booting, and power-cycling are physical actions.
+> For the flash itself (3.6–3.7), boot from the SD, then the agent can SSH in and run the  and  commands from the live environment.
 
 - [ ] 3.1 Download the Armbian Trixie current minimal image: `wget https://dl.armbian.com/orangepi5/Trixie_current_minimal -O ~/Downloads/Armbian_Trixie_orangepi5.img.xz` or download via browser
 - [ ] 3.2 Verify the download checksum (compare SHA256 against the image page)
@@ -43,6 +49,9 @@
 - [ ] 3.8 Shut down, remove flash medium, power on from NVMe
 
 ## 4. First Boot & Armbian Setup
+
+> **👤 Human required**: The first-boot wizard (4.1) runs on the console — plug in a monitor+keyboard or use the Armbian serial console.
+> Task 4.3 onwards can be done remotely once networking is up and credentials are set.
 
 - [ ] 4.1 Complete Armbian first-boot wizard: set hostname (orangepi), create user (orangepi), set password, configure timezone
 - [ ] 4.2 Configure static IP to 192.168.2.113:
