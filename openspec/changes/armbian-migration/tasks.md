@@ -10,10 +10,10 @@
 
 ## 2. Backup
 
-- [ ] 2.1 Connect backup drive and verify it's mounted (`/mnt/backup-drive/`)
-- [ ] 2.2 Rsync /home/orangepi to backup drive (`rsync -aAXv --info=progress2 /home/orangepi/ /mnt/backup-drive/home-backup/`)
-- [ ] 2.3 Verify /home backup integrity (`diff -r --brief /home/orangepi/ /mnt/backup-drive/home-backup/ | grep -v "^Only in"` or file count comparison)
-- [ ] 2.4 Rsync /media to temporary storage (`rsync -aAXv --info=progress2 /media/ /mnt/temp-media-store/media-backup/`)
+- [ ] 2.1 Connect external NVMe via USB-C, verify mount point (e.g. `/mnt/backup-nvme`)
+- [ ] 2.2 Rsync /home/orangepi to backup NVMe (`rsync -aAXv --info=progress2 /home/orangepi/ /mnt/backup-nvme/home-backup/`)
+- [ ] 2.3 Verify /home backup integrity (`diff -r --brief /home/orangepi/ /mnt/backup-nvme/home-backup/ | grep -v "^Only in"` or file count comparison)
+- [ ] 2.4 Rsync /media to backup NVMe (`rsync -aAXv --info=progress2 /media/ /mnt/backup-nvme/media-backup/`)
 - [ ] 2.5 Verify /media backup integrity
 - [ ] 2.6 Make a note of which running containers need their images saved vs re-pulled (`docker image ls`)
 
@@ -39,13 +39,13 @@
 - [ ] 5.2 Add orangepi user to docker group (`sudo usermod -aG docker orangepi`)
 - [ ] 5.3 Verify Docker works without sudo (`docker ps`)
 - [ ] 5.4 Clone the repo: `git clone https://github.com/automationStati0n/orangepi5 ~/Github/orangepi5`
-- [ ] 5.5 Restore /home/orangepi from backup drive: `rsync -aAXv /mnt/backup-drive/home-backup/ /home/orangepi/`
+- [ ] 5.5 Restore /home/orangepi from backup NVMe: `rsync -aAXv /mnt/backup-nvme/home-backup/ /home/orangepi/`
 - [ ] 5.6 Verify Documents/ directory structure matches expected Docker bind mounts (`~/Documents/jellyfin`, `~/Documents/qbittorrent`, `~/Documents/jackett`)
 
 ## 6. Docker Stack Deployment
 
 - [ ] 6.1 Pull latest Docker images: `sudo docker pull qmcgaw/gluetun lscr.io/linuxserver/jackett lscr.io/linuxserver/qbittorrent lscr.io/linuxserver/jellyfin stremio/server`
-- [ ] 6.2 Restore /media from temporary storage (`rsync -aAXv /mnt/temp-media-store/media-backup/ /media/`)
+- [ ] 6.2 Restore /media from backup NVMe (`rsync -aAXv /mnt/backup-nvme/media-backup/ /media/`)
 - [ ] 6.3 Run the Docker stack: `cd ~/Github/orangepi5 && sudo ./docker/run.sh`
 - [ ] 6.4 Verify each container is running and healthy (`docker ps --format "table {{.Names}} {{.Status}}"`)
 - [ ] 6.5 Test Jellyfin at http://192.168.2.113:8096
@@ -86,5 +86,5 @@ Run each check against the Baseline in `design.md`.
 - [ ] 9.1 Fix PIA credentials: debug `pia-wg-config` auth failure so `wg0.conf` can be regenerated. Verify with `sudo ./docker/run.sh`
 - [ ] 9.2 Install Docker auto-prune cron: `docker system prune --volumes -f` weekly to prevent image/volume bloat
 - [ ] 9.3 Install convenience extras as needed (VS Code, RustDesk, Firefox, Go, Flatpak apps) — one at a time
-- [ ] 9.4 Add the undocumented Copyparty container to the repo's docker-compose stack
+- [ ] 9.4 Add Copyparty to docker-compose stack (model on existing services, port 3923, mounts `/media`)
 - [ ] 9.5 Clean up old backup drives

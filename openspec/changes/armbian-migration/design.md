@@ -140,10 +140,11 @@ See proposal.md for the full motivation and scope.
 7. Note current installed packages (for convenience layer)
 
 ### Phase 1: Backup
-1. `rsync -aAXv /home/orangepi/ /mnt/backup-drive/home-backup/`
-2. `rsync -aAXv /media/ /mnt/temp-media-store/media-backup/`
-3. Verify backup integrity
-4. `sudo docker save` any non-pulled images (or just note them)
+1. Connect external NVMe via USB-C enclosure, verify mounted (e.g. `/mnt/backup-nvme`)
+2. `rsync -aAXv /home/orangepi/ /mnt/backup-nvme/home-backup/`
+3. `rsync -aAXv /media/ /mnt/backup-nvme/media-backup/`
+4. Verify backup integrity (file count / checksum)
+5. `sudo docker save` any non-pulled images (or just note them)
 
 ### Phase 2: Flash
 1. Write Armbian image to NVMe via SD card or USB (following existing `flash-image-ansible/` process, but with Armbian image)
@@ -171,10 +172,11 @@ These items are outside the core migration flow but required before the system i
 
 - **PIA credentials**: `pia-wg-config` fails with authentication error on the current system. The existing `wg0.conf` still works, so the migration should proceed with backing it up as-is. After migration, debug and fix the PIA credentials so the config can be regenerated when needed.
 - **Docker auto-prune**: Add a cron job or systemd timer to regularly prune unused Docker images, volumes, and build cache. Prevent the 150 GB bloat from recurring. (See tasks section 9.)
+- **Copyparty to docker-compose**: The Copyparty container runs manually (not in any compose file). Add it to the docker-compose stack so it's managed alongside the other services.
 
 ## Open Questions
 
-- The user has a Copyparty container that wasn't previously documented in the repo's docker-compose files — we should decide whether to add it to the stack or manage it separately.
+None currently.
 
 ## Baseline: Pre-Migration System State
 
