@@ -1,10 +1,19 @@
+> **⚠️ Known trap**: `docker/run.sh` has a latent relative-path bug — the `PIA_CREDENTIALS_FILE=../../secrets` and `restart_docker_compose ../qbittorrent` paths resolve inconsistently depending on whether `pia-wg-config` is already installed. If the script errors on auth but containers still start (because the existing `wg0.conf` is valid), the VPN is actually working. Do not waste time debugging — the auth failure is a separate PIA credentials issue noted in task 9.1.
+
 ## 1. Preparation (on current Ubuntu)
 
 - [ ] 1.1 Clean up remaining waste: empty trash, clear browser caches, remove duplicate Go in /root
 - [ ] 1.2 Verify all Docker containers are healthy and running (jellyfin, qbittorrent, jackett, stremio, gluetun, copyparty)
 - [ ] 1.3 Verify wg0.conf exists and contains valid WireGuard keys (`/home/orangepi/Github/orangepi5/wg0.conf`)
 - [ ] 1.4 Commit and push the migration branch: `git push origin migration/armbian`
-- [ ] 1.5 Disable cron jobs that could write data during backup (`crontab -l`, note them for restore)
+- [ ] 1.5 Back up all gitignored secret files to the backup NVMe:
+     ```bash
+     cp ~/Github/orangepi5/secrets /mnt/backup-nvme/secrets.backup
+     cp ~/Github/orangepi5/wg0.conf /mnt/backup-nvme/wg0.conf.backup
+     ```
+- [ ] 1.6 Disable cron jobs that could write data during backup (`crontab -l`, note them for restore)
+- [ ] 1.7 Note current network config (`ip addr`, `ip route`, `resolvectl`) for static IP on Armbian
+- [ ] 1.8 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
 - [ ] 1.6 Note current network config (`ip addr`, `ip route`, `resolvectl`) for static IP on Armbian
 - [ ] 1.7 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
 
@@ -23,13 +32,30 @@
 - [ ] 3.2 Verify the download checksum (compare SHA256 against the image page)
 - [ ] 3.3 Write Armbian image to an SD card or USB stick for initial boot (following existing `flash-image-ansible/` process, substituting Armbian image)
 - [ ] 3.4 Copy rkspi_loader.img and Armbian image to the flash medium
-- [ ] 3.5 Boot from SD/USB, wipe NVMe partitions, flash rkspi_loader to /dev/mtdblock0, dd Armbian image to /dev/nvme0n1
-- [ ] 3.6 Shut down, remove flash medium, power on from NVMe
+- [ ] 3.5 Boot from SD/USB flash medium
+- [ ] 3.6 Delete all partitions on NVMe:
+     ```bash
+     echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/mtdblock0
+     echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/nvme0n1
+     ```
+- [ ] 3.7 Flash bootloader firmware, then write Armbian image:
+     ```bash
+     sudo dd if=/path/to/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc
+     sudo xzcat /path/to/Armbian_*_Orangepi5_trixie_current_*.img.xz | sudo dd bs=1M of=/dev/nvme0n1 status=progress
+     ```
+- [ ] 3.8 Shut down, remove flash medium, power on from NVMe
 
 ## 4. First Boot & Armbian Setup
 
 - [ ] 4.1 Complete Armbian first-boot wizard: set hostname (orangepi), create user (orangepi), set password, configure timezone
-- [ ] 4.2 Configure static IP to 192.168.2.113 via armbian-config or nmcli
+- [ ] 4.2 Configure static IP to 192.168.2.113:
+     ```bash
+     sudo nmcli con mod eth0 ipv4.addresses 192.168.2.113/24
+     sudo nmcli con mod eth0 ipv4.gateway 192.168.2.1
+     sudo nmcli con mod eth0 ipv4.dns 8.8.8.8
+     sudo nmcli con mod eth0 ipv4.method manual
+     sudo nmcli con down eth0 && sudo nmcli con up eth0
+     ```
 - [ ] 4.3 Verify SSH access is working from the network
 - [ ] 4.4 Run `apt update && apt upgrade -y` to bring system current
 
@@ -38,13 +64,31 @@
 - [ ] 5.1 Install Docker and docker-compose-plugin (`apt install docker.io docker-compose-plugin -y`)
 - [ ] 5.2 Add orangepi user to docker group (`sudo usermod -aG docker orangepi`)
 - [ ] 5.3 Verify Docker works without sudo (`docker ps`)
-- [ ] 5.4 Clone the repo: `git clone https://github.com/automationStati0n/orangepi5 ~/Github/orangepi5`
+- [ ] 5.4 Clone the repo (SSH — keys restored from `/home` backup):
+     ```bash
+     git clone git@github.com:AutoMas0n/orangepi5.git ~/Github/orangepi5
+     cd ~/Github/orangepi5 && git checkout migration/armbian
+     ```
 - [ ] 5.5 Restore /home/orangepi from backup NVMe: `rsync -aAXv /mnt/backup-nvme/home-backup/ /home/orangepi/`
-- [ ] 5.6 Verify Documents/ directory structure matches expected Docker bind mounts (`~/Documents/jellyfin`, `~/Documents/qbittorrent`, `~/Documents/jackett`)
+- [ ] 5.6 Restore gitignored secret files from backup:
+     ```bash
+     cp /mnt/backup-nvme/secrets.backup ~/Github/orangepi5/secrets
+     cp /mnt/backup-nvme/wg0.conf.backup ~/Github/orangepi5/wg0.conf
+     ```
+- [ ] 5.7 Verify SSH key is present for git: `ls -la ~/.ssh/id_ed25519` (should exist if backed up from /home)
+- [ ] 5.8 Verify Documents/ directory structure matches expected Docker bind mounts (`~/Documents/jellyfin`, `~/Documents/qbittorrent`, `~/Documents/jackett`)
 
 ## 6. Docker Stack Deployment
 
-- [ ] 6.1 Pull latest Docker images: `sudo docker pull qmcgaw/gluetun lscr.io/linuxserver/jackett lscr.io/linuxserver/qbittorrent lscr.io/linuxserver/jellyfin stremio/server`
+- [ ] 6.1 Pull all 6 Docker images:
+     ```bash
+     sudo docker pull qmcgaw/gluetun
+     sudo docker pull lscr.io/linuxserver/jackett
+     sudo docker pull lscr.io/linuxserver/qbittorrent
+     sudo docker pull lscr.io/linuxserver/jellyfin
+     sudo docker pull stremio/server
+     sudo docker pull copyparty/ac
+     ```
 - [ ] 6.2 Restore /media from backup NVMe (`rsync -aAXv /mnt/backup-nvme/media-backup/ /media/`)
 - [ ] 6.3 Run the Docker stack: `cd ~/Github/orangepi5 && sudo ./docker/run.sh`
 - [ ] 6.4 Verify each container is running and healthy (`docker ps --format "table {{.Names}} {{.Status}}"`)
@@ -86,5 +130,17 @@ Run each check against the Baseline in `design.md`.
 - [ ] 9.1 Fix PIA credentials: debug `pia-wg-config` auth failure so `wg0.conf` can be regenerated. Verify with `sudo ./docker/run.sh`
 - [ ] 9.2 Install Docker auto-prune cron: `docker system prune --volumes -f` weekly to prevent image/volume bloat
 - [ ] 9.3 Install convenience extras as needed (VS Code, RustDesk, Firefox, Go, Flatpak apps) — one at a time
-- [ ] 9.4 Add Copyparty to docker-compose stack (model on existing services, port 3923, mounts `/media`)
+- [ ] 9.4 Add Copyparty to docker-compose stack. From inspection: runs on port 3923, mounts `/media` read-only+copy. Add a compose service block like:
+     ```yaml
+     copyparty:
+       image: copyparty/ac:latest
+       container_name: copyparty
+       command: --http-only -v /media:media:r:c,e2d,e2t
+       ports:
+         - 3923:3923
+       volumes:
+         - /media:/media:ro
+       restart: unless-stopped
+     ```
+     Place in `docker/copyparty/docker-compose.yml` or the main stack file, then `sudo docker compose up -d copyparty`
 - [ ] 9.5 Clean up old backup drives
