@@ -3,7 +3,7 @@
 - [ ] 1.1 Clean up remaining waste: empty trash, clear browser caches, remove duplicate Go in /root
 - [ ] 1.2 Verify all Docker containers are healthy and running (jellyfin, qbittorrent, jackett, stremio, gluetun, copyparty)
 - [ ] 1.3 Verify wg0.conf exists and contains valid WireGuard keys (`/home/orangepi/Github/orangepi5/wg0.conf`)
-- [ ] 1.4 Push latest repo changes to remote (`git push origin main`)
+- [ ] 1.4 Commit and push the migration branch: `git push origin migration/armbian`
 - [ ] 1.5 Disable cron jobs that could write data during backup (`crontab -l`, note them for restore)
 - [ ] 1.6 Note current network config (`ip addr`, `ip route`, `resolvectl`) for static IP on Armbian
 - [ ] 1.7 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
@@ -58,8 +58,17 @@
 - [ ] 7.2 Set up cron jobs for daily docker pull and watchtower (from `docker/README.md`)
 - [ ] 7.3 Run 48-hour burn-in check before declaring rollback window closed
 
-## 8. Post-Migration Cleanup (deferred / optional)
+## 8. Finalization (after 48-hour burn-in passes)
 
-- [ ] 8.1 Install convenience extras as needed (VS Code, RustDesk, Firefox, Go, Flatpak apps) — one at a time
-- [ ] 8.2 Add the undocumented Copyparty container to the repo's docker-compose stack
-- [ ] 8.3 Clean up old backup drives
+- [ ] 8.1 On the new Armbian system: `cd ~/Github/orangepi5 && git checkout -b migration/armbian origin/migration/armbian` to pull the latest branch
+- [ ] 8.2 Push any post-migration fixes or config updates back to the branch
+- [ ] 8.3 Merge migration/armbian into main and push: `git checkout main && git merge migration/armbian && git push origin main`
+- [ ] 8.4 Delete the remote branch: `git push origin --delete migration/armbian`
+- [ ] 8.5 Delete the local branch: `git branch -d migration/armbian`
+- [ ] 8.6 Run `openspec archive change armbian-migration` to archive the completed change
+
+## 9. Post-Migration Cleanup (deferred / optional)
+
+- [ ] 9.1 Install convenience extras as needed (VS Code, RustDesk, Firefox, Go, Flatpak apps) — one at a time
+- [ ] 9.2 Add the undocumented Copyparty container to the repo's docker-compose stack
+- [ ] 9.3 Clean up old backup drives
