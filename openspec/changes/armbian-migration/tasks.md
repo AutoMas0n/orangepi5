@@ -1,3 +1,5 @@
+> **📋 Human companion file**: Before starting, give the human `openspec/changes/armbian-migration/HUMAN.md` — it tells them exactly when to plug in drives, boot from SD, etc. The tasks below reference 👤 sections that need human physical action.
+
 > **⚠️ Known trap**: `docker/run.sh` has a latent relative-path bug — the `PIA_CREDENTIALS_FILE=../../secrets` and `restart_docker_compose ../qbittorrent` paths resolve inconsistently depending on whether `pia-wg-config` is already installed. If the script errors on auth but containers still start (because the existing `wg0.conf` is valid), the VPN is actually working. Do not waste time debugging — the auth failure is a separate PIA credentials issue noted in task 9.1.
 
 ## 1. Preparation (on current Ubuntu)
