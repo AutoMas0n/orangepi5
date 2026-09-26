@@ -54,9 +54,23 @@
 
 ## 7. Verification & Validation
 
-- [ ] 7.1 Confirm all services work identically to the previous setup
-- [ ] 7.2 Set up cron jobs for daily docker pull and watchtower (from `docker/README.md`)
-- [ ] 7.3 Run 48-hour burn-in check before declaring rollback window closed
+Run each check against the Baseline in `design.md`.
+
+- [ ] 7.1 Network: verify IP is 192.168.2.113/24, gateway 192.168.2.1, DNS 8.8.8.8 (`ip addr`, `ip route`, `resolvectl`)
+- [ ] 7.2 MAC address matches baseline: 0a:79:72:f3:0f:3b (`ip addr show eth0`)
+- [ ] 7.3 All 6 containers are running and healthy (`sudo docker ps --format "table {{.Names}} {{.Status}}"`)
+- [ ] 7.4 Gluetun shows "healthy" status (`sudo docker ps --filter name=gluetun`)
+- [ ] 7.5 Gluetun VPN is connected (check public IP matches PIA Toronto region in container logs)
+- [ ] 7.6 Jellyfin responds at http://192.168.2.113:8096 (curl or browser)
+- [ ] 7.7 qBittorrent WebUI responds at http://192.168.2.113:8080
+- [ ] 7.8 Jackett responds at http://192.168.2.113:9117
+- [ ] 7.9 Copyparty responds at http://192.168.2.113:3923
+- [ ] 7.10 All 6 container images match the baseline list (`sudo docker image ls`)
+- [ ] 7.11 Cron jobs restored correctly: user and root crontab match baseline
+- [ ] 7.12 Storage layout matches: single partition, /boot/firmware mounted, no RAID warnings
+- [ ] 7.13 Copyparty works: browse http://192.168.2.113:3923 and confirm /media contents are visible
+- [ ] 7.14 Set up cron jobs for daily docker pull and watchtower (from `docker/README.md`)
+- [ ] 7.15 Run 48-hour burn-in check before declaring rollback window closed
 
 ## 8. Finalization (after 48-hour burn-in passes)
 

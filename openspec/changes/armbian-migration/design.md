@@ -175,3 +175,67 @@ These items are outside the core migration flow but required before the system i
 ## Open Questions
 
 - The user has a Copyparty container that wasn't previously documented in the repo's docker-compose files — we should decide whether to add it to the stack or manage it separately.
+
+## Baseline: Pre-Migration System State
+
+Recorded 2026-09-26. Use these values to verify the Armbian setup is identical.
+
+### Host
+- **OS**: Ubuntu 22.04.5 LTS
+- **Kernel**: 5.10.160-rockchip
+- **Hostname**: localhost (transient)
+- **Machine ID**: 8f893751d94a8b2ddb80eb0065b95bc6
+
+### Network (eth0)
+- **IP**: 192.168.2.113/24
+- **Gateway**: 192.168.2.1
+- **DNS**: 8.8.8.8
+- **MAC**: 0a:79:72:f3:0f:3b
+### Storage
+- **NVMe**: /dev/nvme0n1p2 — 939G total, 166G used, 735G free (19%)
+- **Boot**: /dev/nvme0n1p1 — 511M, /boot/firmware
+- **Firmware**: /dev/mtdblock0 — 16M (bootloader)
+- **BTRFS RAID1**: commented out in fstab (drives normally powered off)
+
+### Running Containers (6)
+| Container | Status | Ports |
+|---|---|---|
+| gluetun | Up (healthy) | 8888, 8388, 6881, 8080, 9117, 11470 |
+| qbittorrent | Up | through gluetun network |
+| jackett | Up | through gluetun network |
+| stremio | Up | through gluetun network |
+| jellyfin | Up | 8096, 8920, 7359/udp, 1900/udp |
+| copyparty | Up | 3923 |
+
+### Container Images
+- qmcgaw/gluetun
+- lscr.io/linuxserver/qbittorrent:latest
+- lscr.io/linuxserver/jackett:latest
+- lscr.io/linuxserver/jellyfin:latest
+- stremio/server:latest
+- copyparty/ac:latest
+
+### Copyparty Config
+- Cmd: `--http-only -v /media:media:r:c,e2d,e2t` (serves /media read-only+copy)
+
+### Cron Jobs
+| When | What | Runs as |
+|---|---|---|
+| `0 0 * * *` | `/home/orangepi/Github/orangepi5/docker/docker_pull.sh` | user + root |
+| `0 3 * * *` | `cd ~/Github/orangepi5/docker && sudo ./run.sh` | root |
+
+### Service URLs
+| Service | URL |
+|---|---|
+| Jellyfin | http://192.168.2.113:8096 |
+| qBittorrent | http://192.168.2.113:8080 |
+| Jackett | http://192.168.2.113:9117 |
+| Copyparty | http://192.168.2.113:3923 |
+
+### VPN Status
+- **Provider**: PIA (Private Internet Access)
+- **Region**: Toronto, Canada
+- **Public IP**: 66.56.81.91
+- **Config file**: `~/Github/orangepi5/wg0.conf` (250 bytes, last generated Aug 20)
+- **Credentials file**: `~/Github/orangepi5/secrets` (gitignored)
+- **Known issue**: `pia-wg-config` fails auth, but existing wg0.conf works
