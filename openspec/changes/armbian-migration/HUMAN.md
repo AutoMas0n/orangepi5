@@ -7,7 +7,7 @@
 
 | Item | Why |
 |---|---|
-| **USB-C NVMe enclosure + spare NVMe** (256 GB+ recommended) | To back up `/home` (~10 GB) and `/media` (~133 GB) |
+| **USB-C NVMe enclosure + spare NVMe** (256 GB+ free space) | To hold the backup of `/home` (~10 GB) and `/media` (~133 GB) alongside whatever is already on it |
 | **SD card** (16 GB+), **SD card reader** | To boot the Armbian installer |
 | **Monitor + HDMI cable** or **serial console cable** | For the Armbian first-boot wizard |
 | **USB keyboard** | To type during first-boot wizard (if using monitor) |
@@ -20,7 +20,7 @@
 ### ⏸️ 0. BEFORE YOU START
 
 Make sure:
-- [ ] Your external NVMe is **empty or expendable** — it will get wiped by the backup
+- [ ] Your external NVMe has **at least 256 GB free space** — the backup won't delete anything on it
 - [ ] You have the backup NVMe enclosure ready (USB-C)
 - [ ] You know your PIA VPN credentials (in case WireGuard needs re-auth after migration)
 - [ ] You have about **2–4 hours** of total downtime for the Pi
