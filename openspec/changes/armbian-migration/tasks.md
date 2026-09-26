@@ -69,6 +69,8 @@
 
 ## 9. Post-Migration Cleanup (deferred / optional)
 
-- [ ] 9.1 Install convenience extras as needed (VS Code, RustDesk, Firefox, Go, Flatpak apps) — one at a time
-- [ ] 9.2 Add the undocumented Copyparty container to the repo's docker-compose stack
-- [ ] 9.3 Clean up old backup drives
+- [ ] 9.1 Fix PIA credentials: debug `pia-wg-config` auth failure so `wg0.conf` can be regenerated. Verify with `sudo ./docker/run.sh`
+- [ ] 9.2 Install Docker auto-prune cron: `docker system prune --volumes -f` weekly to prevent image/volume bloat
+- [ ] 9.3 Install convenience extras as needed (VS Code, RustDesk, Firefox, Go, Flatpak apps) — one at a time
+- [ ] 9.4 Add the undocumented Copyparty container to the repo's docker-compose stack
+- [ ] 9.5 Clean up old backup drives

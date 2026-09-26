@@ -122,6 +122,8 @@ See proposal.md for the full motivation and scope.
 | **Data loss during backup/restore** | Verify backups with `diff -r` or checksum comparison before wiping NVMe. Keep Ubuntu bootable (boot from SD card) until Armbian is verified. |
 | **Docker compose files reference absolute paths** | The `.env` files reference `~/Documents/...` — make sure the restored `/home/orangepi/Documents/` directory structure is identical. |
 | **Gluetun WireGuard config lost** | `wg0.conf` is outside the repo (gitignored). It's in `~/orangepi5/wg0.conf` — confirm it's backed up with `/home`. The PIA credentials and key generation script need checking. |
+| **PIA credentials expired / failing auth** | Confirmed pre-migration: `pia-wg-config` fails with authentication error, though the existing `wg0.conf` still works. If the config needs regeneration post-migration and credentials are dead, VPN breaks. **Must fix credentials as a post-migration task.** |
+| **Docker image bloat will accumulate again** | After cleanup (150 GB freed), the same pattern of old images/volumes will recur without periodic pruning. Need automated cleanup cron. |
 | **New Armbian kernel breaks a Docker service** | Test each container after migration. Keep the Ubuntu NVMe untouched until all services are verified. |
 | **Ansible partial failure pattern repeats** | That's why we're replacing Ansible with a focused script for critical path. No cross-role dependencies, no external role downloads. |
 | **Downtime during migration** | Acceptable — the box can be offline for a few hours. The plan minimizes downtime to the flash + restore window (~1-2 hours for 143 GB data transfer). |
@@ -163,7 +165,13 @@ See proposal.md for the full motivation and scope.
 - Keep Ubuntu NVMe untouched until Armbian is verified for 48 hours
 - If rollback needed: boot from SD card with the current Ubuntu backup, dd the previous Ubuntu image back, restore files from the same backup
 
+## Post-Migration Work (confirmed)
+
+These items are outside the core migration flow but required before the system is fully healthy:
+
+- **PIA credentials**: `pia-wg-config` fails with authentication error on the current system. The existing `wg0.conf` still works, so the migration should proceed with backing it up as-is. After migration, debug and fix the PIA credentials so the config can be regenerated when needed.
+- **Docker auto-prune**: Add a cron job or systemd timer to regularly prune unused Docker images, volumes, and build cache. Prevent the 150 GB bloat from recurring. (See tasks section 9.)
+
 ## Open Questions
 
-- Does the Gluetun `wg0.conf` need regeneration, or is the existing file reusable as-is on a fresh system? (It's a static WireGuard config — should work. Verify after restore.)
 - The user has a Copyparty container that wasn't previously documented in the repo's docker-compose files — we should decide whether to add it to the stack or manage it separately.
