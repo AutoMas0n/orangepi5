@@ -15,17 +15,29 @@
 
 > **👤 Human required**: Plug in the external NVMe via USB-C (2.1). Everything else the agent can run over SSH.
 
-- [ ] 2.1 Connect external NVMe via USB-C, verify mount point (e.g. `/mnt/backup-nvme`)
-- [ ] 2.2 Back up gitignored secret files explicitly (belt-and-suspenders — also captured by rsync in 2.3):
+> **⚠️ Nesting trap**: The backup NVMe auto-mounts under `/media/`. If you rsync `/media/` directly to a path on the same drive, it copies the backup into itself — filling the drive with infinite nesting. **Always bind-mount the NVMe at `/mnt/backup-nvme` first** to keep source and destination paths separate.
+
+- [ ] 2.1 Connect external NVMe via USB-C, run `lsblk` to find its mount point (typically `/media/orangepi/WavLink`)
+- [ ] 2.2 Bind-mount at `/mnt/backup-nvme` and create backup directory:
      ```bash
-     cp ~/Github/orangepi5/secrets /mnt/backup-nvme/secrets.backup
-     cp ~/Github/orangepi5/wg0.conf /mnt/backup-nvme/wg0.conf.backup
+     sudo mkdir -p /mnt/backup-nvme
+     sudo mount --bind /media/orangepi/WavLink /mnt/backup-nvme
+     sudo mkdir -p /mnt/backup-nvme/armbian-migration-backup
      ```
-- [ ] 2.3 Rsync /home/orangepi to backup NVMe (`rsync -aAXv --info=progress2 /home/orangepi/ /mnt/backup-nvme/home-backup/`)
-- [ ] 2.4 Verify /home backup integrity (`diff -r --brief /home/orangepi/ /mnt/backup-nvme/home-backup/ | grep -v "^Only in"` or file count comparison)
-- [ ] 2.5 Rsync /media to backup NVMe (`rsync -aAXv --info=progress2 /media/ /mnt/backup-nvme/media-backup/`)
-- [ ] 2.6 Verify /media backup integrity
-- [ ] 2.7 Make a note of which running containers need their images saved vs re-pulled (`docker image ls`)
+- [ ] 2.3 Back up gitignored secret files explicitly (belt-and-suspenders — also captured by rsync in 2.4):
+     ```bash
+     cp ~/Github/orangepi5/secrets /mnt/backup-nvme/armbian-migration-backup/secrets.backup
+     cp ~/Github/orangepi5/wg0.conf /mnt/backup-nvme/armbian-migration-backup/wg0.conf.backup
+     ```
+- [ ] 2.4 Rsync /home/orangepi to backup NVMe (`rsync -aAXv --info=progress2 /home/orangepi/ /mnt/backup-nvme/armbian-migration-backup/home-backup/`)
+- [ ] 2.5 Verify /home backup integrity (`diff -r --brief /home/orangepi/ /mnt/backup-nvme/armbian-migration-backup/home-backup/ | grep -v "^Only in"` or file count comparison)
+- [ ] 2.6 Rsync /media to backup NVMe (`rsync -aAXv --info=progress2 /media/ /mnt/backup-nvme/armbian-migration-backup/media-backup/`)
+- [ ] 2.7 Verify /media backup integrity (file count comparison):
+     ```bash
+     echo "Source: $(sudo find /media/ -type f | wc -l) files"
+     echo "Dest:   $(sudo find /mnt/backup-nvme/armbian-migration-backup/media-backup/ -type f | wc -l) files"
+     ```
+- [ ] 2.8 Make a note of which running containers need their images saved vs re-pulled (`sudo docker ps`)
 
 ## 3. Download Armbian and Prepare Flash Medium
 
@@ -77,11 +89,11 @@
      git clone git@github.com:AutoMas0n/orangepi5.git ~/Github/orangepi5
      cd ~/Github/orangepi5 && git checkout migration/armbian
      ```
-- [ ] 5.5 Restore /home/orangepi from backup NVMe: `rsync -aAXv /mnt/backup-nvme/home-backup/ /home/orangepi/`
+- [ ] 5.5 Restore /home/orangepi from backup NVMe: `rsync -aAXv /mnt/backup-nvme/armbian-migration-backup/home-backup/ /home/orangepi/`
 - [ ] 5.6 Restore gitignored secret files from backup:
      ```bash
-     cp /mnt/backup-nvme/secrets.backup ~/Github/orangepi5/secrets
-     cp /mnt/backup-nvme/wg0.conf.backup ~/Github/orangepi5/wg0.conf
+     cp /mnt/backup-nvme/armbian-migration-backup/secrets.backup ~/Github/orangepi5/secrets
+     cp /mnt/backup-nvme/armbian-migration-backup/wg0.conf.backup ~/Github/orangepi5/wg0.conf
      ```
 - [ ] 5.7 Verify SSH key is present for git: `ls -la ~/.ssh/id_ed25519` (should exist if backed up from /home)
 - [ ] 5.8 Verify Documents/ directory structure matches expected Docker bind mounts (`~/Documents/jellyfin`, `~/Documents/qbittorrent`, `~/Documents/jackett`)
@@ -97,7 +109,7 @@
      sudo docker pull stremio/server
      sudo docker pull copyparty/ac
      ```
-- [ ] 6.2 Restore /media from backup NVMe (`rsync -aAXv /mnt/backup-nvme/media-backup/ /media/`)
+- [ ] 6.2 Restore /media from backup NVMe (`rsync -aAXv /mnt/backup-nvme/armbian-migration-backup/media-backup/ /media/`)
 - [ ] 6.3 Run the Docker stack: `cd ~/Github/orangepi5 && sudo ./docker/run.sh`
 - [ ] 6.4 Verify each container is running and healthy (`docker ps --format "table {{.Names}} {{.Status}}"`)
 - [ ] 6.5 Test Jellyfin at http://192.168.2.113:8096
@@ -110,23 +122,21 @@ Run each check against the Baseline in `design.md`.
 
 - [ ] 7.1 Network: verify IP is 192.168.2.113/24, gateway 192.168.2.1, DNS 8.8.8.8 (`ip addr`, `ip route`, `resolvectl`)
 - [ ] 7.2 MAC address matches baseline: 0a:79:72:f3:0f:3b (`ip addr show eth0`)
-- [ ] 7.3 All 6 containers are running and healthy (`sudo docker ps --format "table {{.Names}} {{.Status}}"`)
+- [ ] 7.3 All 5 Docker services are running and healthy (`sudo docker ps --format "table {{.Names}} {{.Status}}"`)
 - [ ] 7.4 Gluetun shows "healthy" status (`sudo docker ps --filter name=gluetun`)
 - [ ] 7.5 Gluetun VPN is connected (check public IP matches PIA Toronto region in container logs)
 - [ ] 7.6 Jellyfin responds at http://192.168.2.113:8096 (curl or browser)
 - [ ] 7.7 qBittorrent WebUI responds at http://192.168.2.113:8080
 - [ ] 7.8 Jackett responds at http://192.168.2.113:9117
-- [ ] 7.9 Copyparty responds at http://192.168.2.113:3923
-- [ ] 7.10 All 6 container images match the baseline list (`sudo docker image ls`)
-- [ ] 7.11 Cron jobs restored correctly: user and root crontab match baseline
-- [ ] 7.12 Storage layout matches: single partition, /boot/firmware mounted, no RAID warnings
-- [ ] 7.13 Copyparty works: browse http://192.168.2.113:3923 and confirm /media contents are visible
-- [ ] 7.14 Set up cron jobs for daily docker pull and watchtower (from `docker/README.md`)
-- [ ] 7.15 Run 48-hour burn-in check before declaring rollback window closed
+- [ ] 7.9 All 6 container images match the baseline list (`sudo docker image ls`)
+- [ ] 7.10 Cron jobs restored correctly: user and root crontab match baseline
+- [ ] 7.11 Storage layout matches: single partition, /boot/firmware mounted, no RAID warnings
+- [ ] 7.12 Set up cron jobs for daily docker pull and watchtower (from `docker/README.md`)
+- [ ] 7.13 Run 48-hour burn-in check before declaring rollback window closed
 
 ## 8. Finalization (after 48-hour burn-in passes)
 
-- [ ] 8.1 On the new Armbian system: `cd ~/Github/orangepi5 && git checkout -b migration/armbian origin/migration/armbian` to pull the latest branch
+- [ ] 8.1 On the new Armbian system, ensure the migration branch is up to date: `cd ~/Github/orangepi5 && git pull origin migration/armbian`
 - [ ] 8.2 Push any post-migration fixes or config updates back to the branch
 - [ ] 8.3 Merge migration/armbian into main and push: `git checkout main && git merge migration/armbian && git push origin main`
 - [ ] 8.4 Delete the remote branch: `git push origin --delete migration/armbian`

@@ -137,7 +137,7 @@ Check these URLs in your browser:
 | Jellyfin | http://192.168.2.113:8096 | Login page loads |
 | qBittorrent | http://192.168.2.113:8080 | WebUI loads |
 | Jackett | http://192.168.2.113:9117 | Jackett dashboard |
-| Copyparty | http://192.168.2.113:3923 | File browser with your media |
+<!-- Copyparty is a manual service and is not started during migration -->
 
 All good? Tell the agent "verified" — they'll run the 48-hour burn-in.
 

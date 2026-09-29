@@ -110,9 +110,9 @@ See proposal.md for the full motivation and scope.
 
 ### 5. Repository and Script Structure
 
-**Decision:** Keep the Docker stack configurations and the new provisioning script in this same repo (`orangepi5`), cloned on first boot.
+**Decision:** Keep the Docker stack configurations in this same repo (`orangepi5`), cloned on first boot. The critical-path setup is executed as documented command sequences in the task list.
 
-**Rationale:** Single source of truth. The repo already holds all Docker compose files, environment files, and runner scripts. Adding a `setup-armbian.sh` or similar is the minimal addition.
+**Rationale:** Single source of truth. The repo already holds all Docker compose files, environment files, and runner scripts. Inline commands are more transparent and reliable than a monolithic provisioning script for a one-time migration.
 
 ## Risks / Trade-offs
 
@@ -121,7 +121,7 @@ See proposal.md for the full motivation and scope.
 | **Armbian image doesn't support RK3588 hardware transcoding** | Tested in advance — Armbian's rockchip kernel (6.x) includes MPP/VA-API drivers. Verify before flash. |
 | **Data loss during backup/restore** | Verify backups with `diff -r` or checksum comparison before wiping NVMe. Keep Ubuntu bootable (boot from SD card) until Armbian is verified. |
 | **Docker compose files reference absolute paths** | The `.env` files reference `~/Documents/...` — make sure the restored `/home/orangepi/Documents/` directory structure is identical. |
-| **Gluetun WireGuard config lost** | `wg0.conf` is outside the repo (gitignored). It's in `~/orangepi5/wg0.conf` — confirm it's backed up with `/home`. The PIA credentials and key generation script need checking. |
+| **Gluetun WireGuard config lost** | `wg0.conf` is outside the repo (gitignored). It's in `~/Github/orangepi5/wg0.conf` — confirm it's backed up with `/home`. The PIA credentials and key generation script need checking. |
 | **PIA credentials expired / failing auth** | Confirmed pre-migration: `pia-wg-config` fails with authentication error, though the existing `wg0.conf` still works. If the config needs regeneration post-migration and credentials are dead, VPN breaks. **Must fix credentials as a post-migration task.** |
 | **Docker image bloat will accumulate again** | After cleanup (150 GB freed), the same pattern of old images/volumes will recur without periodic pruning. Need automated cleanup cron. |
 | **New Armbian kernel breaks a Docker service** | Test each container after migration. Keep the Ubuntu NVMe untouched until all services are verified. |
@@ -141,10 +141,11 @@ See proposal.md for the full motivation and scope.
 
 ### Phase 1: Backup
 1. Connect external NVMe via USB-C enclosure, verify mounted (e.g. `/mnt/backup-nvme`)
-2. `rsync -aAXv /home/orangepi/ /mnt/backup-nvme/home-backup/`
-3. `rsync -aAXv /media/ /mnt/backup-nvme/media-backup/`
-4. Verify backup integrity (file count / checksum)
-5. `sudo docker save` any non-pulled images (or just note them)
+2. Create backup parent directory: `mkdir -p /mnt/backup-nvme/armbian-migration-backup`
+3. `rsync -aAXv /home/orangepi/ /mnt/backup-nvme/armbian-migration-backup/home-backup/`
+4. `rsync -aAXv /media/ /mnt/backup-nvme/armbian-migration-backup/media-backup/`
+5. Verify backup integrity (file count / checksum)
+6. `sudo docker save` any non-pulled images (or just note them)
 
 ### Phase 2: Flash
 1. Write Armbian image to NVMe via SD card or USB (following existing `flash-image-ansible/` process, but with Armbian image)
