@@ -41,14 +41,30 @@
 
 ## 3. Download Armbian and Prepare Flash Medium
 
-> **👤 Human required**: Tasks 3.3–3.8 require physical access to the Orange Pi 5.
-> The agent can download the image and verify it, but writing to SD, booting, and power-cycling are physical actions.
-> For the flash itself (3.6–3.7), boot from the SD, then the agent can SSH in and run the  and  commands from the live environment.
+> **👤 Human required**: the human actions in this section are 3.4 (insert the medium), 3.5 (boot it) and 3.8 (power-cycle); the destructive commands in 3.6–3.7 are run by the agent over SSH.
+> The agent downloads, verifies and **pre-seeds** the image (3.1–3.3), then runs the destructive flash commands (3.7) once the live environment is up.
+> **The first boot needs no console**: the pre-seeded image (3.3) brings up SSH, the `orangepi`/`orangepi` account and the static IP 192.168.2.113 on its own.
+> **No RAM-boot escape hatch**: the running kernel has `CONFIG_KEXEC` unset, so a boot medium (USB stick or SD card) is required — see design.md decision 7.
 
-- [ ] 3.1 Download the Armbian Trixie current minimal image: `wget https://dl.armbian.com/orangepi5/Trixie_current_minimal -O ~/Downloads/Armbian_Trixie_orangepi5.img.xz` or download via browser
-- [ ] 3.2 Verify the download checksum (compare SHA256 against the image page)
-- [ ] 3.3 Write Armbian image to an SD card or USB stick for initial boot (following existing `flash-image-ansible/` process, substituting Armbian image)
-- [ ] 3.4 Copy rkspi_loader.img and Armbian image to the flash medium
+- [x] 3.1 Download the Armbian Trixie current minimal image: `wget https://dl.armbian.com/orangepi5/Trixie_current_minimal` — **downloaded to `/mnt/backup-nvme/armbian-migration-backup/`**, not `~/Downloads` (that path is on the NVMe being wiped; the backup NVMe survives the wipe and is still readable while booted from the flash medium for 3.7). Resolves to `Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal.img.xz` (356,570,828 bytes)
+- [x] 3.2 Verify the download checksum — **verified** SHA256 `a7633627a54b6d8c5f03294cbf1b3b998d55b8e1e15cfb5296a3c440b981fcb5` (matches the published `.sha`). Detached `.asc` also verified: Good signature, RSA key `DF00FAF1C577104B50BF1D0093D6889F9F0E78D5` ("Igor Pecovnik <igor@armbian.com>")
+- [x] 3.3 Pre-seed the image for a headless first boot (done before flashing, on the pristine extraction):
+  - user `orangepi` (uid/gid 1000, groups `sudo,video,render,audio,plugdev,netdev`), password `orangepi`; `root` password also `orangepi`
+  - `/etc/ssh/sshd_config.d/10-migration-headless.conf`: `PasswordAuthentication yes`, `PubkeyAuthentication yes`, `PermitRootLogin prohibit-password` (sshd already enabled in the image; `Include` at the top of `sshd_config` means this drop-in wins)
+  - `/home/orangepi/.ssh/authorized_keys`: agent/human public key installed (`600`, owner 1000) as an alternative to the password
+  - static IP via netplan: `/etc/netplan/10-dhcp-all-interfaces.yaml` (renderer `networkd`, Armbian's own file — **no** competing file) → `192.168.2.113/24`, gateway `192.168.2.1`, DNS `8.8.8.8`, matched by `name: "e*"` so the interface may be `eth0` **or** `end0`
+  - hostname `orangepi` (image ships `orangepi5`), `/etc/hosts` updated
+  - `/root/.not_logged_in_yet` deleted → the console first-login wizard never runs
+  - output: `Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img` (1,799,356,416 bytes), sha256 `4d40ba14efc2068ccd5e8c8725f756c420733d288b98ed01528a7d483ef7efae`
+  - validated in-image with `netplan generate` and `sshd -t`; the pristine `.img.xz` is kept untouched next to it
+- [ ] 3.4 Write the **pre-seeded** image to the boot medium for the initial boot (USB stick preferred — the Pi's USB-A ports are free; an SD card works equally well):
+     ```bash
+     # agent, once the medium is inserted into the Pi and confirmed with lsblk
+     sudo dd if=/mnt/backup-nvme/armbian-migration-backup/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img \
+             of=/dev/<medium> bs=8M status=progress conv=fsync
+     ```
+     `rkspi_loader.img` no longer needs copying anywhere: it is already on the backup NVMe (in `home-backup/Github/orangepi5/flash-image-ansible/roles/flash_firmware/files/`), which stays readable in the live environment for 3.7.
+     Alternative if the agent is not to touch the medium: write the same `.img` yourself from your own machine, then skip to 3.5.
 - [ ] 3.5 Boot from SD/USB flash medium
 - [ ] 3.6 Delete all partitions on NVMe:
      ```bash
@@ -57,25 +73,19 @@
      ```
 - [ ] 3.7 Flash bootloader firmware, then write Armbian image:
      ```bash
-     sudo dd if=/path/to/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc
-     sudo xzcat /path/to/Armbian_*_Orangepi5_trixie_current_*.img.xz | sudo dd bs=1M of=/dev/nvme0n1 status=progress
+     sudo dd if=/mnt/backup-nvme/armbian-migration-backup/home-backup/Github/orangepi5/flash-image-ansible/roles/flash_firmware/files/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc
+     sudo dd if=/mnt/backup-nvme/armbian-migration-backup/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img bs=8M of=/dev/nvme0n1 status=progress conv=fsync
      ```
 - [ ] 3.8 Shut down, remove flash medium, power on from NVMe
 
 ## 4. First Boot & Armbian Setup
 
-> **👤 Human required**: The first-boot wizard (4.1) runs on the console — plug in a monitor+keyboard or use the Armbian serial console.
-> Task 4.3 onwards can be done remotely once networking is up and credentials are set.
+> **👤 Human required**: nothing — the first boot is headless. The console wizard is disabled in the image and every wizard setting was pre-seeded in 3.3.
+> A monitor+keyboard or serial console is only needed if the box fails to appear on the network.
 
-- [ ] 4.1 Complete Armbian first-boot wizard: set hostname (orangepi), create user (orangepi), set password, configure timezone
-- [ ] 4.2 Configure static IP to 192.168.2.113:
-     ```bash
-     sudo nmcli con mod eth0 ipv4.addresses 192.168.2.113/24
-     sudo nmcli con mod eth0 ipv4.gateway 192.168.2.1
-     sudo nmcli con mod eth0 ipv4.dns 8.8.8.8
-     sudo nmcli con mod eth0 ipv4.method manual
-     sudo nmcli con down eth0 && sudo nmcli con up eth0
-     ```
+- [ ] 4.1 Verify the pre-seeded first boot took effect: `ssh orangepi@192.168.2.113` (password `orangepi`) → expect hostname `orangepi`, no console wizard prompt. Timezone is `Etc/UTC`, identical to the pre-migration system, so nothing to set.
+- [ ] 4.2 Verify the static IP is applied (`ip -4 addr show`, `ip route`, `resolvectl status`) → expect `192.168.2.113/24`, gateway `192.168.2.1`, DNS `8.8.8.8`. This is a **check, not a change** — 3.3 already configured it.
+     Armbian 26.8.1 uses **netplan + systemd-networkd**; `nmcli`/NetworkManager and `/etc/network/interfaces` are **not installed**. To change the address later, edit `/etc/netplan/10-dhcp-all-interfaces.yaml` and run `sudo netplan apply`.
 - [ ] 4.3 Verify SSH access is working from the network
 - [ ] 4.4 Run `apt update && apt upgrade -y` to bring system current
 

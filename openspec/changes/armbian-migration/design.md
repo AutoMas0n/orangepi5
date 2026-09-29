@@ -100,13 +100,16 @@ See proposal.md for the full motivation and scope.
 
 ### 4. Network Configuration
 
-**Decision:** Armbian's `armbian-config` for initial setup (hostname, static IP via NetworkManager), then retain the same IP (192.168.2.113).
+**Decision:** Pre-seed the static address into the image itself with **netplan (renderer: `systemd-networkd`)**, matching the Ethernet device by name glob (`e*`) instead of a specific interface name. Retain the same address (192.168.2.113).
 
-**Rationale:** Armbian defaults to NetworkManager, not Netplan. Fighting that in favor of Netplan was one reason Ansible broke. Using `nmcli` or `armbian-config` is the OS-native path and survives updates.
+**Rationale (corrected after inspecting the actual 26.8.1 image):** This Armbian build does **not** ship NetworkManager — `nmcli` and `/usr/sbin/NetworkManager` are absent, and `/etc/network/interfaces` does not exist. The active stack is **netplan.io → systemd-networkd**, with Armbian's own `/etc/netplan/10-dhcp-all-interfaces.yaml` doing DHCP for `e*`. The original version of this decision (written before inspecting the image) assumed NetworkManager and `nmcli`; that was wrong for this image. The static config was therefore folded **into Armbian's own netplan file** rather than added as a second, competing file — two match-based entries for the same device would race, and networkd/netplan precedence would decide the winner non-obviously.
+
+**Why name-glob matching:** the pre-migration box reports `eth0`, but Armbian's udev-based naming may produce `end0` or `enp*`. `e*` covers all of them and is Armbian's own default pattern. Matching by MAC was rejected because the baseline MAC (`0a:79:...`) is locally administered and may be regenerated.
 
 **Alternatives considered:**
-- Netplan (Ubuntu way): Requires installing netplan package on Armbian, works against defaults.
-- Raw /etc/network/interfaces: Works but diverges from Armbian's managed config.
+- `nmcli` / NetworkManager: not installed; would mean pulling in a whole extra network stack.
+- Raw `/etc/network/interfaces`: not even installed, and diverges from Armbian's defaults.
+- A separate netplan file for the static address: risks the DHCP entry winning; editing Armbian's file is unambiguous.
 
 ### 5. Repository and Script Structure
 
@@ -114,12 +117,41 @@ See proposal.md for the full motivation and scope.
 
 **Rationale:** Single source of truth. The repo already holds all Docker compose files, environment files, and runner scripts. Inline commands are more transparent and reliable than a monolithic provisioning script for a one-time migration.
 
+### 6. Image Pre-Seeding (headless first boot)
+
+**Decision:** Patch the downloaded image before flashing so the first boot needs no console at all:
+
+| What | Where | Value |
+|---|---|---|
+| User + password | `/etc/passwd`, `/etc/shadow` | `orangepi` (uid/gid 1000), groups `sudo,video,render,audio,plugdev,netdev`; password `orangepi` (root password set the same) |
+| SSH on, password auth | `/etc/ssh/sshd_config.d/10-migration-headless.conf` | `PasswordAuthentication yes`, `PubkeyAuthentication yes`, `PermitRootLogin prohibit-password` |
+| Agent/human key | `/home/orangepi/.ssh/authorized_keys` | public key, `600` + owner 1000 |
+| Static IP | `/etc/netplan/10-dhcp-all-interfaces.yaml` | `192.168.2.113/24`, gw `192.168.2.1`, dns `8.8.8.8` |
+| Hostname | `/etc/hostname`, `/etc/hosts` | `orangepi` (image ships `orangepi5`) |
+| Console wizard | `/root/.not_logged_in_yet` | deleted — its presence is what triggers `armbian-firstlogin` |
+
+**Rationale:** the migration is designed to be driven over SSH from the start. Without pre-seeding, the only way in on first boot is a monitor+keyboard (or serial console) at the wizard, and any first-boot failure is invisible until the human is physically present. Pre-seeding makes the flash step the only remaining physical act (inserting a medium and power-cycling), and turns 4.1/4.2 from "configure" into "verify".
+
+**Mechanism note:** this image predates/omits the old `armbian_first_run.txt` mechanism; the modern build triggers `armbian-firstlogin` only from `/etc/profile.d/armbian-check-first-login.sh` when `/root/.not_logged_in_yet` exists, which is why deleting that one flag is enough. `systemd-firstboot.service` is already masked in the image. Editing the image directly (mount, chroot, `netplan generate`, `sshd -t`) is more deterministic than hoping a wizard honours a config file.
+
+**Verified outcome:** `netplan generate` and `sshd -t` both pass in the patched image; `sshd -T` reports `passwordauthentication yes`, `permitrootlogin without-password`, `pubkeyauthentication yes`, `permitemptypasswords no`.
+
+### 7. Flash Medium and the KEXEC Dead End
+
+**Decision:** Use a **USB stick** (preferred) or an **SD card** as the staging boot medium. The agent writes it with `dd` from the image already sitting on the backup NVMe.
+
+**Rationale:** the NVMe cannot be wiped from the system running on it without risk. Armbian 26.8.1 for orangepi5 is a **single GPT partition** (ext4 root starting at sector 32768; the image is only 1.68 GiB, bootloader at raw sectors 64/16384), and `armbian-resize-filesystem.service` grows the rootfs to fill the 953 GB NVMe on first boot — so a plain `dd` of the image to `/dev/nvme0n1` is the whole procedure, no manual partitioning.
+
+**Rejected alternative — boot a flash environment entirely from RAM:** this was the preferred no-extra-hardware option, but the running kernel (5.10.160-rockchip) has **`CONFIG_KEXEC` and `CONFIG_KEXEC_FILE` unset** and `kexec-tools` is not installed, so a kernel cannot be loaded from the running system. Without kexec the only hardware-free option is writing the NVMe *in place* from the running Ubuntu (quiesce to single-user, `swapoff`, `fsfreeze`, run a static busybox from `/dev/shm`, `dd` from the backup NVMe). That was rejected as the default because the filesystem being written is still mounted and live, and a mid-write failure leaves no bootable system — recovery would need maskrom mode + `rkdeveloptool` from a PC. Kept only as a documented last resort for a situation with no removable medium at all.
+
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
 |---|---|
 | **Armbian image doesn't support RK3588 hardware transcoding** | Tested in advance — Armbian's rockchip kernel (6.x) includes MPP/VA-API drivers. Verify before flash. |
-| **Data loss during backup/restore** | Verify backups with `diff -r` or checksum comparison before wiping NVMe. Keep Ubuntu bootable (boot from SD card) until Armbian is verified. |
+| **Data loss during backup/restore** | Verify backups with `diff -r` or checksum comparison before wiping NVMe. The Ubuntu install on the NVMe is *not* preserved by this plan — rollback means re-flashing a boot medium and restoring from the backup NVMe, not booting the old system. |
+| **Pre-seeded image no longer matches the published checksum** | The flashed `.img` is a modified derivative: keep the pristine `.img.xz` + `.sha` + `.asc` (verified against Armbian's key) next to it, and record the derivative's own sha256 (`4d40ba14…ef7ae`). Verify the derivative, never the published digest, against what was flashed. |
+| **Static IP is never reachable on first boot** | Worst case the box needs a console after all. Mitigations: name-glob netplan match (works for `eth0`/`end0`), SSH key *and* password both enabled, and the plan keeps monitor+keyboard as a documented fallback in HUMAN.md. |
 | **Docker compose files reference absolute paths** | The `.env` files reference `~/Documents/...` — make sure the restored `/home/orangepi/Documents/` directory structure is identical. |
 | **Gluetun WireGuard config lost** | `wg0.conf` is outside the repo (gitignored). It's in `~/Github/orangepi5/wg0.conf` — confirm it's backed up with `/home`. The PIA credentials and key generation script need checking. |
 | **PIA credentials expired / failing auth** | Confirmed pre-migration: `pia-wg-config` fails with authentication error, though the existing `wg0.conf` still works. If the config needs regeneration post-migration and credentials are dead, VPN breaks. **Must fix credentials as a post-migration task.** |
@@ -148,8 +180,9 @@ See proposal.md for the full motivation and scope.
 6. `sudo docker save` any non-pulled images (or just note them)
 
 ### Phase 2: Flash
-1. Write Armbian image to NVMe via SD card or USB (following existing `flash-image-ansible/` process, but with Armbian image)
-2. First boot: set password, hostname, network (via `armbian-config` or first-run wizard)
+1. Pre-seed the image ahead of time: SSH, `orangepi`/`orangepi`, static IP, hostname (decision 6) — done before any hardware is touched
+2. Write the pre-seeded image to a boot medium (USB stick or SD), boot it, wipe the NVMe, flash `rkspi_loader.img` + the image
+3. First boot is headless: no console, no wizard — SSH is up at 192.168.2.113 immediately
 
 ### Phase 3: Restore
 1. Mount backup drive, restore `/home/`

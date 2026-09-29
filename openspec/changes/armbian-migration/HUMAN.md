@@ -8,9 +8,8 @@
 | Item | Why |
 |---|---|
 | **USB-C NVMe enclosure + spare NVMe** (256 GB+ free space) | To hold the backup of `/home` (~10 GB) and `/media` (~133 GB) alongside whatever is already on it |
-| **SD card** (16 GB+), **SD card reader** | To boot the Armbian installer |
-| **Monitor + HDMI cable** or **serial console cable** | For the Armbian first-boot wizard |
-| **USB keyboard** | To type during first-boot wizard (if using monitor) |
+| **USB stick** (8 GB+) *or* **SD card** (16 GB+) + reader | Boot medium: a live Armbian environment to run the flash from. USB is preferred — the Pi's USB-A ports are free |
+| **Monitor + HDMI cable** or **serial console cable** *(optional)* | Only needed if the Pi fails to appear on the network — the first boot is headless |
 | **Internet connection** | The Pi needs to download Docker images after migration |
 
 ---
@@ -22,6 +21,7 @@
 Make sure:
 - [ ] Your external NVMe has **at least 256 GB free space** — the backup won't delete anything on it
 - [ ] You have the backup NVMe enclosure ready (USB-C)
+- [ ] You have a **USB stick (8 GB+) or SD card (16 GB+)** for the boot medium
 - [ ] You know your PIA VPN credentials (in case WireGuard needs re-auth after migration)
 - [ ] You have about **2–4 hours** of total downtime for the Pi
 
@@ -44,71 +44,52 @@ The agent will walk you through this, but here's what happens:
 
 ---
 
-### 💾 2. FLASH ARMBIA — Human Step
+### 💾 2. FLASH ARMBIAN — Human Step
 
-1. **Tell the agent to download the Armbian image**
-   - Agent runs: `wget https://dl.armbian.com/orangepi5/Trixie_current_minimal`
-   - Wait for agent to verify checksum
+1. **The image is already downloaded, checksum-verified and pre-seeded** (the agent did this before you got here)
+   - It is `Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img` on the backup NVMe
+   - It boots with **SSH already enabled**, the **`orangepi` / `orangepi`** account, and the **static IP 192.168.2.113** — so there is no first-boot wizard and no monitor or keyboard needed
+   - Note: use the **`-preconfigured.img`**, not the original `.img.xz` — the `.img.xz` does *not* have these settings
 
-2. **Write the image to an SD card** (you do this part):
-   ```
-   # On your computer (or on the Pi itself):
-   # Find your SD card device (IMPORTANT: don't wipe your main drive!)
-   lsblk
-   
-   # If SD card is /dev/sdX, write the image:
-   xzcat ~/Downloads/Armbian_*_Orangepi5_trixie_current_*.img.xz | \
-     sudo dd bs=1M of=/dev/sdX status=progress
-   ```
+2. **Plug the boot medium into the Orange Pi** (USB stick preferred; SD card also fine)
+   - Just the medium — no separate card reader or computer needed
+   - Tell the agent "medium inserted": the agent confirms the device with `lsblk` and writes the image to it
+   - If you'd rather write it yourself, the exact command is in `tasks.md` 3.4 — again, point it at the `-preconfigured.img`
 
-3. **Also copy the bootloader file** to the SD:
-   - You need `rkspi_loader.img` — it's in the `flash-image-ansible/roles/flash_firmware/files/` directory of this repo
-
-4. **Shut down the Pi:**
+3. **Shut down the Pi:**
    ```
    sudo shutdown -h now
    ```
 
-5. **Remove the SD card from your computer**, insert it into the Orange Pi
-6. **Connect a monitor+keyboard** (or serial console) to the Pi
-7. **Power on the Pi** — it will boot from the SD card
+4. **Power on the Pi** — it boots the live medium
+   - If it boots the old system instead, press F2/ESC at power-on and select the USB/SD device
+   - It comes up on **192.168.2.113** — the same static IP, because the pre-seeded image carries it. No monitor needed.
 
-8. **Tell the agent "booted from SD, ready to flash"**
-   - Agent will SSH in and run:
+5. **Tell the agent "booted from the medium, ready to flash"**
+   - The agent now has SSH access to the live environment at 192.168.2.113 and will run:
      - `gdisk` to wipe the NVMe partitions
      - `dd` to flash `rkspi_loader.img` to `/dev/mtdblock0`
-     - `xzcat … | dd` to write Armbian to `/dev/nvme0n1`
+     - `dd` to write the pre-seeded Armbian image to `/dev/nvme0n1`
+   - Nothing needs to be copied onto the medium first — both files already live on the backup NVMe
 
-9. **When agent says "flash complete" — power off:**
+6. **When agent says "flash complete" — power off:**
    ```
    sudo shutdown -h now
    ```
 
-10. **Remove the SD card** from the Pi
-11. **Power on the Pi** — it will boot Armbian from the NVMe
+7. **Remove the boot medium** from the Pi
+8. **Power on the Pi** — it will boot Armbian from the NVMe
 
 ---
 
 ### 🖥️ 3. FIRST BOOT — Human Step
 
-1. **Watch the console** — Armbian shows a first-boot wizard
-2. **Set these values** when prompted:
+**Nothing to do.** No wizard, no monitor, no prompts:
 
-   | Prompt | What to type |
-   |---|---|
-   | Hostname | `orangepi` |
-   | Username | `orangepi` |
-   | Password | `orangepi` (or whatever you use) |
-   | Timezone | Your timezone (e.g. `America/New_York`) |
-   | Root login | Disallow SSH root login = `yes` |
-
-3. **After the wizard completes**, the Pi will probably reboot
-4. **Wait for it to come back up**, then find its IP:
-   - Check your router's DHCP leases
-   - Or connect a monitor and run `ip addr`
-
-5. **Tell the agent the IP address** (should be `192.168.2.113` if DHCP gives the same one; if different, note it)
-6. **Agent will configure the static IP** and install Docker
+1. Wait a minute or two for the Pi to boot from the NVMe
+2. It comes up on **192.168.2.113**, user **`orangepi`**, password **`orangepi`**, with SSH already running
+3. Tell the agent "first boot done" — it will SSH in and continue with Docker
+4. Only if the Pi never appears on the network: plug in a monitor and check `ip addr`
 
 ---
 
@@ -157,8 +138,8 @@ If everything is still working:
 
 | Problem | What to do |
 |---|---|
-| **Pi won't boot from SD** | Enter boot menu (F2/ESC during power-on), select SD card |
-| **Can't find the Pi on the network** | Connect a monitor, run `ip addr`, look for `192.168.x.x` |
+| **Pi won't boot from the USB/SD medium** | Enter the boot menu (F2/ESC during power-on), select the USB or SD device |
+| **Can't find the Pi on the network** | The address is static now (`192.168.2.113`), not DHCP — check the router isn't already using it, or connect a monitor and run `ip addr` |
 | **Backup NVMe not detected** | Run `lsblk` — if it's there, tell agent the device path |
 | **Services don't start** | Tell the agent which one — they'll check the Docker logs |
 | **Gluetun VPN not connecting** | Known issue — PIA credentials may need updating (see task 9.1) |
