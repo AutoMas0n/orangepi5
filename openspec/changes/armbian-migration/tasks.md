@@ -17,27 +17,27 @@
 
 > **⚠️ Nesting trap**: The backup NVMe auto-mounts under `/media/`. If you rsync `/media/` directly to a path on the same drive, it copies the backup into itself — filling the drive with infinite nesting. **Always bind-mount the NVMe at `/mnt/backup-nvme` first** to keep source and destination paths separate.
 
-- [ ] 2.1 Connect external NVMe via USB-C, run `lsblk` to find its mount point (typically `/media/orangepi/WavLink`)
-- [ ] 2.2 Bind-mount at `/mnt/backup-nvme` and create backup directory:
+- [x] 2.1 Connect external NVMe via USB-C, run `lsblk` to find its mount point (typically `/media/orangepi/WavLink`)
+- [x] 2.2 Bind-mount at `/mnt/backup-nvme` and create backup directory:
      ```bash
      sudo mkdir -p /mnt/backup-nvme
      sudo mount --bind /media/orangepi/WavLink /mnt/backup-nvme
      sudo mkdir -p /mnt/backup-nvme/armbian-migration-backup
      ```
-- [ ] 2.3 Back up gitignored secret files explicitly (belt-and-suspenders — also captured by rsync in 2.4):
+- [x] 2.3 Back up gitignored secret files explicitly (belt-and-suspenders — also captured by rsync in 2.4):
      ```bash
      cp ~/Github/orangepi5/secrets /mnt/backup-nvme/armbian-migration-backup/secrets.backup
      cp ~/Github/orangepi5/wg0.conf /mnt/backup-nvme/armbian-migration-backup/wg0.conf.backup
      ```
-- [ ] 2.4 Rsync /home/orangepi to backup NVMe (`rsync -aAXv --info=progress2 /home/orangepi/ /mnt/backup-nvme/armbian-migration-backup/home-backup/`)
-- [ ] 2.5 Verify /home backup integrity (`diff -r --brief /home/orangepi/ /mnt/backup-nvme/armbian-migration-backup/home-backup/ | grep -v "^Only in"` or file count comparison)
-- [ ] 2.6 Rsync /media to backup NVMe (`rsync -aAXv --info=progress2 /media/ /mnt/backup-nvme/armbian-migration-backup/media-backup/`)
-- [ ] 2.7 Verify /media backup integrity (file count comparison):
+- [x] 2.4 Rsync /home/orangepi to backup NVMe (`rsync -aAXv --info=progress2 /home/orangepi/ /mnt/backup-nvme/armbian-migration-backup/home-backup/`)
+- [x] 2.5 Verify /home backup integrity (`diff -r --brief /home/orangepi/ /mnt/backup-nvme/armbian-migration-backup/home-backup/ | grep -v "^Only in"` or file count comparison)
+- [x] 2.6 Rsync /media to backup NVMe (`rsync -aAXv --info=progress2 /media/ /mnt/backup-nvme/armbian-migration-backup/media-backup/`)
+- [x] 2.7 Verify /media backup integrity (file count comparison):
      ```bash
      echo "Source: $(sudo find /media/ -type f | wc -l) files"
      echo "Dest:   $(sudo find /mnt/backup-nvme/armbian-migration-backup/media-backup/ -type f | wc -l) files"
      ```
-- [ ] 2.8 Make a note of which running containers need their images saved vs re-pulled (`sudo docker ps`)
+- [x] 2.8 Make a note of which running containers need their images saved vs re-pulled (`sudo docker ps`)
 
 ## 3. Download Armbian and Prepare Flash Medium
 
