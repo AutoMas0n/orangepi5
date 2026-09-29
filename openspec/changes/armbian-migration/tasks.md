@@ -4,13 +4,13 @@
 
 ## 1. Preparation (on current Ubuntu)
 
-- [ ] 1.1 Clean up remaining waste: empty trash, clear browser caches, remove duplicate Go in /root
-- [ ] 1.2 Verify all Docker containers are healthy and running (jellyfin, qbittorrent, jackett, stremio, gluetun, copyparty)
-- [ ] 1.3 Verify wg0.conf exists and contains valid WireGuard keys (`/home/orangepi/Github/orangepi5/wg0.conf`)
-- [ ] 1.4 Commit and push the migration branch: `git push origin migration/armbian`
-- [ ] 1.5 Disable cron jobs that could write data during backup (`crontab -l`, note them for restore)
-- [ ] 1.6 Note current network config (`ip addr`, `ip route`, `resolvectl`) for static IP on Armbian
-- [ ] 1.7 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
+- [x] 1.1 Clean up remaining waste: empty trash, clear browser caches, remove duplicate Go in /root
+- [x] 1.2 Verify all Docker containers are healthy and running (jellyfin, qbittorrent, jackett, stremio, gluetun, copyparty)
+- [x] 1.3 Verify wg0.conf exists and contains valid WireGuard keys (`/home/orangepi/Github/orangepi5/wg0.conf`)
+- [x] 1.4 Commit and push the migration branch: `git push origin migration/armbian`
+- [x] 1.5 Disable cron jobs that could write data during backup (`crontab -l`, note them for restore)
+- [x] 1.6 Note current network config (`ip addr`, `ip route`, `resolvectl`) for static IP on Armbian
+- [x] 1.7 List currently installed packages for the convenience layer (`dpkg --get-selections > ~/packages.txt`)
 ## 2. Backup
 
 > **👤 Human required**: Plug in the external NVMe via USB-C (2.1). Everything else the agent can run over SSH.
