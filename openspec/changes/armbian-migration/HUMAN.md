@@ -109,6 +109,14 @@ The agent will walk you through this, but here's what happens:
 
 3. **Wait for "stack is running"** — the agent will verify each service
 
+4. **Rebuild the configuration that was lost** — this is the part that could not be restored, because it was never in the backup (see design decision 10):
+   | What | Why it's manual |
+   |---|---|
+   | **qBittorrent torrents** | the torrent list and `.fastresume` data are gone; every payload is still in `/media`, so re-add and let it recheck |
+   | **Jackett indexers** | indexer definitions and tracker credentials are gone; the *API key* was recovered, so nothing downstream needs changing |
+   | **qBittorrent WebUI password** | was never effective via the old `qBittorrent-data.conf` mount; set it once in the UI (or ask the agent) |
+   | **TorrentLeech** | needs your login for Jackett's indexer, or add `.torrent` files from the site (your passkey is embedded in them) |
+
 ---
 
 ### ✅ 5. VERIFY — Human Step
@@ -117,9 +125,11 @@ Check these URLs in your browser:
 
 | Service | URL | What to look for |
 |---|---|---|
-| Jellyfin | http://192.168.2.113:8096 | Login page loads |
 | qBittorrent | http://192.168.2.113:8080 | WebUI loads |
 | Jackett | http://192.168.2.113:9117 | Jackett dashboard |
+| Copyparty | http://192.168.2.113:3923 | file listing |
+
+(Jellyfin was retired — see decision 12.)
 <!-- Copyparty is a manual service and is not started during migration -->
 
 All good? Tell the agent "verified" — they'll run the 48-hour burn-in.
@@ -144,4 +154,5 @@ If everything is still working:
 | **Can't find the Pi on the network** | The address is static now (`192.168.2.113`), not DHCP — check the router isn't already using it, or connect a monitor and run `ip addr` |
 | **Backup NVMe not detected** | Run `lsblk` — if it's there, tell agent the device path |
 | **Services don't start** | Tell the agent which one — they'll check the Docker logs |
-| **Gluetun VPN not connecting** | Known issue — PIA credentials may need updating (see task 9.1) |
+| **Gluetun VPN not connecting** | The old `wg0.conf` endpoint was retired by PIA. Run `sudo ./docker/refresh-wireguard.sh` on the Pi (it mints a fresh config via PIA's current flow) — or rely on `vpn-watchdog.timer`, which does this automatically after ~30 minutes of a dead tunnel. |
+| **Everything is down after a reboot** | Should no longer happen: gluetun has `restart: unless-stopped` and `media-stack.service` starts the stack at boot. Check `systemctl status media-stack` and `journalctl -t vpn-watchdog`. |

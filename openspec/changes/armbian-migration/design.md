@@ -170,6 +170,56 @@ source ${scriptaddr}
 
 **Corollary — clone UUIDs are a trap:** the medium's rootfs is a byte-copy of the image, so it advertised the *same* root UUID once the NVMe was flashed. The initramfs resolved `rootdev=UUID=…` to the medium, and the first "new system" boot was silently running off USB. Give one side a fresh UUID (`tune2fs -U`) and update **both** references in it — `/boot/armbianEnv.txt` (`rootdev=`) and `/etc/fstab` — or remove the medium before the first NVMe boot. Check `findmnt -no SOURCE /`; the hostname proves nothing because both systems are `orangepi`.
 
+### 9. VPN: PIA's WireGuard provisioning moved
+
+**Decision:** keep gluetun in `custom` + `wireguard` mode (performance was an explicit requirement — 389 Mbps through the tunnel vs 630 Mbps raw), but generate `wg0.conf` with a new `docker/refresh-wireguard.sh` that wraps **PIA's own maintained** `pia-foss/manual-connections` scripts.
+
+**What changed upstream:** `pia-wg-config` — the Go tool this repo relied on — POSTs to `privateinternetaccess.com/api/client/v2/addKey`. That path now returns **404** for every variation (form, JSON, GET, no-www). PIA moved key registration onto the VPN server itself and gated it behind a token:
+
+1. `POST https://www.privateinternetaccess.com/api/client/v2/token` (form `username`/`password`) — my first probe got 401 only because it sent no form fields
+2. region → WireGuard server from `https://serverlist.piaservers.net/vpninfo/servers/v6`
+3. `GET https://<wg-hostname>:1337/addKey?pt=<token>&pubkey=<pubkey>`, TLS verified against `ca.rsa.4096.crt`
+
+**Consequence of the old premise:** the plan claimed "`pia-wg-config` fails auth but the existing `wg0.conf` still works, so the VPN is fine". That was false. A host-level test showed the tunnel sending 888 B and receiving **0 B** — its endpoint had been retired. The misleading "authentication failure" was a 404 being misreported.
+
+**Rejected alternative:** PIA over OpenVPN via gluetun's native provider. It works with credentials alone (three regions verified) and is the documented fallback, but it is slower, and WireGuard performance was a hard requirement.
+
+### 10. What was lost, and why (backup coverage)
+
+**What happened.** Task 2 backed up `/home/orangepi` and `/media`. The plan asserted the stack's configuration lived in `~/Documents` — and the containers' own `.env` files appeared to agree. Both were wrong in a way nobody checked: `run.sh` runs as root, so Compose expanded `~/Documents` against **`/root`**. The live state therefore lived in `/root/Documents`: qBittorrent's torrent list, `.fastresume` data and categories, Jackett's indexer definitions, Jellyfin's library and settings, copyparty's config.
+
+**Why it was unrecoverable.** Two failures compounded. The state existed only on the old rootfs — not in git, and not anywhere else on the backup drive (a full search of that drive found only game dumps). And by the time it was noticed, the migration had already written the image, scattered `resize2fs` metadata across the 953 GB device, and restored 136 GB — over the region the old filesystem occupied, because ext4 allocates from the start and the old system had ~155 GB used. A read-only scan of the entire device for old directory entries, INI/JSON config markers and bencoded torrent blobs found **nothing that was not our own new data**.
+
+**What survived, and why.** Everything committed to git: compose files, `.env`s, `secrets`, `wg0.conf`, the `.md` docs, and — by luck — the Jackett API key, which had been committed as a qBittorrent search-plugin config. That single fact is the argument for decision 13.
+
+**The rule that replaces the assumption:** coverage must be *derived*, never asserted. `scripts/verify-coverage.sh` (task 2.9) resolves every bind-mount source from the compose files and asserts each lies inside the declared backup set; it must run before any destructive step. The proximate cause is also fixed at the source: every `.env` now uses absolute paths (`/home/orangepi/Documents/...`), so `HOME` can no longer decide where state lands.
+
+### 11. Boot resilience and a self-healing tunnel
+
+**Decision:** the stack must come back by itself after a reboot, and recover from a dead tunnel without a human.
+
+**What was broken:** `gluetun` had **no restart policy** while the other four containers had `unless-stopped`. A reboot would have started Docker, brought up `jackett`/`qbittorrent`/`stremio`/`copyparty` — and left them without networking, because they run in gluetun's network namespace. The single most likely "my server is down" scenario was baked in.
+
+**Now:** gluetun has `restart: unless-stopped`; `media-stack.service` runs `run.sh` at boot (ordered after `docker.service` and `network-online.target`) so the start sequence is deterministic; and `vpn-watchdog.timer` checks gluetun every 5 minutes and escalates — restart the whole stack after 3 consecutive unhealthy cycles, then mint a fresh WireGuard config after 6 (a restart alone cannot fix a retired endpoint). State lives in `/var/lib/vpn-watchdog.fails`, events go to journald.
+
+**Verified:** an unattended `systemctl reboot` brought back all five containers, gluetun healthy, tunnel up at `45.89.249.204`, WebUIs answering, watchdog at 0 failures.
+
+### 12. Retiring Jellyfin
+
+**Decision:** drop Jellyfin from the stack rather than rebuild it.
+
+**Rationale:** it lost the most state (library database, watch history, metadata) with no cheap way back, and it was the only service needing a hardware-specific fix — the old compose passed `/dev/dri/renderD129`, which the new kernel does not expose (`card0`, `card1`, `renderD128` only), so the container could not even start. Carrying a service that needs bespoke patching, whose state is gone, is worse than removing it deliberately. Removed from `run.sh`, the pull list and the docs; compose dir deleted (recoverable from git history); port 8096 no longer expected.
+
+### 13. Tidiness and a single source of truth
+
+**Decision:** delete what is dead, and make the live configuration recoverable from git.
+
+- removed the dead Go toolchain and `pia-wg-config` (installed only to build a tool whose endpoint no longer exists), my exploratory clone, and stray credential/test files
+- `secrets` reduced to `PIA_USER`/`PIA_PASS`; the OpenVPN fallback credentials are not kept because gluetun is WireGuard-only here
+- deleted the stale nested `docker/docker/` duplicate, the typo'd `docker/qbittorrent/qbittorent/` directory, the dropped Jellyfin compose, and the inert `qBittorrent-data.conf` mount + file (qBittorrent reads `qBittorrent.conf`; the mount never worked — as the file's own comment suspected)
+- the recovered API key is kept as `docker/qbittorrent/reference/jackett.json`
+- **the rule:** if a piece of configuration is not in git, it does not exist. The live stack config (compose file, `.env`s, `run.sh`, `docker_pull.sh`, `refresh-wireguard.sh`, tuned `qBittorrent.conf`) must be committed (task 9.7) — today it is single-copy on the Pi, which is exactly the condition that lost the last set
+
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
@@ -180,6 +230,10 @@ source ${scriptaddr}
 | **Hash recorded from a file that was still being modified** | Happened: the derivative's hash was taken *before* a last in-image tidy-up (`rm -rf /run/…`) mutated the filesystem, so the recorded digest (`4d40ba14…`) never matched the file on disk. The authoritative value is computed only **after the last write** — here `5af0cf0de5d6445d7f1ec24e6d66fdca603aac8bfb8a6a38e1917bf262f39058`, confirmed on both the source and the copy. Any hash in this plan is only trustworthy if it post-dates the final `umount` of the image. |
 | **Reading the source rootfs while `dd` overwrites it** | 3.8 copies the image into `/dev/shm` and unmounts the old rootfs *before* writing, so the read and the overwrite never overlap. |
 | **Duplicate root UUID between the image and a clone of it** | Bitten in practice: after flashing, the boot medium and the NVMe both advertised `UUID=17c1be52-…`, and the initramfs quietly resolved `rootdev` to the medium. Detect with `findmnt -no SOURCE /` (not hostname). Fix with `tune2fs -U` plus *both* references (`armbianEnv.txt` + `/etc/fstab`), or by removing the medium first. |
+| **Service state outside the backup set** ⚠️ **realized — worst outcome of this migration** | `~` in `.env` resolved to `/root` because the stack script runs as root, so the state sat in `/root/Documents` while the backup covered `/home` + `/media`. Lost: qBittorrent's torrents/resume data, Jackett's indexers, Jellyfin's library. Mitigation now: absolute paths in every `.env`, and a machine-checked coverage script (task 2.9) that must pass before any destructive step. |
+| **VPN endpoint retired by the provider** | Happened silently: the tunnel handshook with nobody (`0 B received`) while `docker ps` still said "Up". Detect by egress-IP comparison, not container status; recover with `docker/refresh-wireguard.sh`; automated by `vpn-watchdog.timer`. |
+| **A container that has no restart policy** | `gluetun` had none while its four dependents did — one reboot away from taking the whole VPN stack down. All five now `unless-stopped`, plus an ordered systemd unit at boot. |
+| **Live configuration existing only on the host** | The working stack config was single-copy on the Pi for the whole migration — the same failure mode as the lost state. Mitigation: task 9.7 commits it; rule: not in git = does not exist. |
 | **Static IP is never reachable on first boot** | Worst case the box needs a console after all. Mitigations: name-glob netplan match (works for `eth0`/`end0`), SSH key *and* password both enabled, and the plan keeps monitor+keyboard as a documented fallback in HUMAN.md. |
 | **Docker compose files reference absolute paths** | The `.env` files reference `~/Documents/...` — make sure the restored `/home/orangepi/Documents/` directory structure is identical. |
 | **Gluetun WireGuard config lost** | `wg0.conf` is outside the repo (gitignored). It's in `~/Github/orangepi5/wg0.conf` — confirm it's backed up with `/home`. The PIA credentials and key generation script need checking. |
