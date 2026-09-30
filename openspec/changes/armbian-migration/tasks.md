@@ -95,10 +95,10 @@
 > **👤 Human required**: nothing — the first boot is headless. The console wizard is disabled in the image and every wizard setting was pre-seeded in 3.3.
 > A monitor+keyboard or serial console is only needed if the box fails to appear on the network.
 
-- [ ] 4.1 Verify the pre-seeded first boot took effect: `ssh orangepi@192.168.2.113` (password `orangepi`) → expect hostname `orangepi`, no console wizard prompt. Timezone is `Etc/UTC`, identical to the pre-migration system, so nothing to set.
-- [ ] 4.2 Verify the static IP is applied (`ip -4 addr show`, `ip route`, `resolvectl status`) → expect `192.168.2.113/24`, gateway `192.168.2.1`, DNS `8.8.8.8`. This is a **check, not a change** — 3.3 already configured it.
-     Armbian 26.8.1 uses **netplan + systemd-networkd**; `nmcli`/NetworkManager and `/etc/network/interfaces` are **not installed**. To change the address later, edit `/etc/netplan/10-dhcp-all-interfaces.yaml` and run `sudo netplan apply`.
-- [ ] 4.3 Verify SSH access is working from the network
+- [x] 4.1 First boot verified: SSH to `orangepi@192.168.2.113` works, hostname `orangepi`, user uid 1000 in `sudo,video,render,audio,plugdev,netdev`, no console wizard ever appeared, timezone `Etc/UTC` (unchanged from the pre-migration system). Armbian also grants the first user passwordless sudo.
+- [x] 4.2 Static IP verified: `192.168.2.113/24` on **`end0`**, default route via `192.168.2.1`, DNS `8.8.8.8`. The interface really is `end0`, not `eth0` — precisely what the `name: "e*"` netplan match in 3.3 was for, and why the original `nmcli con mod eth0 …` version of this task would have failed twice over.
+- [x] 4.3 SSH verified: `ssh.service` active **and** enabled and reachable from the network.
+- [ ] 4.4 Run `apt update && apt upgrade -y` to bring system current
 - [ ] 4.4 Run `apt update && apt upgrade -y` to bring system current
 
 ## 5. Core Services Setup
