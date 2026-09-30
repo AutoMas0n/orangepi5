@@ -182,6 +182,21 @@ Do **not** re-investigate from scratch — the work is done and written up in **
 
 ### Things worth knowing
 
+* **The Pi cannot reach GitHub.** Its remote is SSH (`git@github.com:…`) and the key at `~/.ssh/id_ed25519` is **not authorized**, so `git fetch`/`pull` fail with `Permission denied (publickey)`. Work from a checkout that *can* push (the Termux copy at `/data/data/com.termux/files/home/github/orangepi5` pushes fine), then bring the Pi forward with a bundle:
+
+  ```bash
+  # on the pushing checkout
+  git bundle create ~/sync.bundle migration/armbian
+  cat ~/sync.bundle | ssh orangepi@192.168.2.113 "cat > /home/orangepi/sync.bundle"
+  # on the Pi
+  cd ~/Github/orangepi5
+  git fetch /home/orangepi/sync.bundle migration/armbian:refs/heads/tmp-sync
+  git reset --hard tmp-sync && git branch -D tmp-sync
+  ```
+
+  Alternatively, authorize the Pi's key on GitHub or switch its remote to HTTPS — either fixes it permanently.
+* **`.gitignore` had a dangerous bug, now fixed.** A previous edit appended `.pi-web/` to a file whose last line had no trailing newline, producing the pattern **`wg0.conf.pi-web/`** — which silently stopped ignoring `wg0.conf`, a file holding a WireGuard private key. `wg0.conf`, `.pi-web/` and `wg0.backups/` are now separate, correct lines. `wg0.backups/` deliberately stays inside the repo: the repo directory is in the backup set, `$HOME` is not.
+* **A git stash may exist on the Pi** (`git stash list`) from aligning its stale checkout. It was verified file-by-file against origin and is safe to drop — it is a safety net, not unique work.
 * `scripts/verify-coverage.sh` proves every bind-mount source is inside the backup set — run it before any destructive step (`checked 8 bind-mount source(s); 0 problem(s)` today).
 * Both VPN-failure paths are automated: `vpn-watchdog.timer` restarts the stack after 3 failed checks and rotates the PIA server after 6; `docker/refresh-wireguard.sh` regenerates `wg0.conf` on demand.
 * Reproducible recipes live in the repo — `docker/qbittorrent/apply-preferences.sh`, `docker/jackett/apply-indexers.sh`, `scripts/backup.sh` — and credentials stay in the gitignored `secrets` file.
