@@ -254,7 +254,9 @@ A search request hangs for ~50 seconds. During that time qBittorrent **forks its
 
 Every layer underneath is demonstrably healthy, invoked exactly as qBittorrent would (uid 30000): `python3 nova2.py --capabilities` emits the precise XML the binary expects (`<capabilities><jackett>…`), `python3 nova2.py jackett movies matrix` returns the full TorrentLeech result set with working `/dl/torrentleech/...` links, the engine is present in the data directory at mode 444 with `# VERSION: 1.53` (qBittorrent rewrites it itself), and qBittorrent's own log says `Found Python executable. Name: "python3". Version: "3.14.7"`.
 
-The remaining suspect is the image: `lscr.io/linuxserver/qbittorrent:latest`, build `5.2.4_v2.0.15-ls479`, built **2026-09-29** — one day old at the time of writing, and the only component whose behaviour changed without anyone touching it. **Next step: pin/try another tag (or report upstream).** Until then the working substitute is Jackett's own UI on `:9117`, which performs the same TorrentLeech searches.
+The remaining suspect is the image: `lscr.io/linuxserver/qbittorrent:latest`, build `5.2.4_v2.0.15-ls479`, built **2026-09-29** — one day old at the time of writing, and the only component whose behaviour changed without anyone touching it.
+
+**Resolved as an accepted limitation** (user decision, 2026-09-30): the image-swap route was **declined**, so this defect is deliberately not pursued further and nothing is pending on it. The supported substitute — and where searches should be run — is **Jackett's own UI on `:9117`**, which performs the same TorrentLeech searches.
 
 ## Risks / Trade-offs
 

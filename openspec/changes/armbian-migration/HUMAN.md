@@ -164,15 +164,14 @@ If everything is still working:
 
 **State of play:** migration is complete and the stack is healthy (5/5 containers, gluetun healthy, tunnel up, watchdog + boot service active). `migration/armbian` is pushed. The remaining work is short and specific.
 
-### The one unresolved defect: qBittorrent's search tab (task 10.4)
+### Accepted limitation: qBittorrent's search tab (task 10.4)
 
-Do **not** re-investigate from scratch — the work is done and written up in **design decision 16**. In short:
+**Do not chase this.** The user declined the image-swap route (2026-09-30), so it is a documented, accepted limitation rather than a pending defect. Full evidence is in **design decision 16**.
 
 * A search hangs ~50 s; qBittorrent forks itself and burns 99% of a core; the Python engine is **never** launched; the job ends `Stopped`/0 and `search/results` returns `Not Found`.
 * Everything it depends on is proven working when invoked directly as uid 30000 (`nova2.py --capabilities` emits the expected XML; `nova2.py jackett movies matrix` returns full TorrentLeech results). Python 3.14.7 is found (`Found Python executable` in qBittorrent's log). The engine is present in `~/docker-data/qBittorrent/nova3/` (mode 444, `# VERSION: 1.53` — qBittorrent rewrites it).
-* **Prime suspect:** the image build `lscr.io/linuxserver/qbittorrent:latest` = `5.2.4_v2.0.15-ls479`, built 2026-09-29.
-* **Suggested next step:** try one tag back (or the official `qbittorrentofficial/qbittorrent-nox`), run a single search, and see whether the fork-at-99%-CPU behaviour disappears. Keep the change reversible and pin whichever tag you settle on.
-* **Working substitute meanwhile:** Jackett's UI at `:9117`.
+* **Cause:** the image build `lscr.io/linuxserver/qbittorrent:latest` = `5.2.4_v2.0.15-ls479`, built 2026-09-29 — not our configuration.
+* **Use instead:** Jackett's own UI at **http://192.168.2.113:9117**, which returns the same TorrentLeech results. (If someone ever *does* want to revisit it, the cheap experiment is one image tag back.)
 
 ### Then, in order
 
