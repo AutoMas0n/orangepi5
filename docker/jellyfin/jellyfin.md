@@ -1,1 +1,0 @@
-https://github.com/linuxserver/docker-jellyfin/blob/master/README.md

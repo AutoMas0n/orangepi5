@@ -22,8 +22,13 @@ services:
     environment:
       - VPN_SERVICE_PROVIDER=custom
       - VPN_TYPE=wireguard
-      - TZ=
+      - TZ=Etc/UTC
       - UPDATER_PERIOD=
+    # wg0.conf is generated with PIA's own maintained flow (see
+    # docker/refresh-wireguard.sh) - NOT pia-wg-config, whose endpoint
+    # (privateinternetaccess.com/api/client/v2/addKey) now returns 404.
+    # Refresh it when the tunnel stops handshaking.
+    restart: unless-stopped
 
   jackett:
     image: lscr.io/linuxserver/jackett:latest
@@ -51,7 +56,6 @@ services:
     volumes:
       - ${QBIT_CONFIG_PATH}:/config
       - ${DOWNLOADS_PATH}:/downloads
-      - /home/orangepi/Github/orangepi5/docker/qbittorrent/qBittorrent-data.conf:/config/qBittorrent/qBittorrent-data.conf:rw
       - ${DOWNLOADS_PATH}/jackett.json:/config/qBittorrent/nova3/engines/jackett.json:rw
     restart: unless-stopped
     network_mode: "service:gluetun"

@@ -1,0 +1,16 @@
+---
+services:
+  copyparty:
+    image: copyparty/ac:latest
+    container_name: copyparty
+    environment:
+      - PUID=30000
+      - PGID=30000
+      - TZ=Etc/UTC
+    volumes:
+      - ${COPYPARTY_CONFIG_PATH}:/cfg
+      - ${MEDIA_PATH}:/media:ro
+    ports:
+      - 3923:3923
+    restart: unless-stopped
+    command: --http-only -v /media:media:r:c,e2d,e2t

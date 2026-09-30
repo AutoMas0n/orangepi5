@@ -5,8 +5,8 @@ images=(
   "qmcgaw/gluetun"
   "lscr.io/linuxserver/jackett"
   "lscr.io/linuxserver/qbittorrent"
-  "lscr.io/linuxserver/jellyfin"
   "stremio/server"
+  "copyparty/ac"
   # Add or remove images as needed
 )
 
