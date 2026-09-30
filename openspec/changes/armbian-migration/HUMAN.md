@@ -46,6 +46,8 @@ The agent will walk you through this, but here's what happens:
 
 ### 💾 2. FLASH ARMBIAN — Human Step
 
+> **Leave the backup NVMe unplugged for this whole section.** Only the boot medium should be attached while the NVMe gets wiped. The images were already copied onto the Pi's internal disk, so nothing here needs the backup drive — it comes back in §4.
+
 1. **The image is already downloaded, checksum-verified and pre-seeded** (the agent did this before you got here)
    - It is `Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img` on the backup NVMe
    - It boots with **SSH already enabled**, the **`orangepi` / `orangepi`** account, and the **static IP 192.168.2.113** — so there is no first-boot wizard and no monitor or keyboard needed
@@ -54,7 +56,7 @@ The agent will walk you through this, but here's what happens:
 2. **Plug the boot medium into the Orange Pi** (USB stick preferred; SD card also fine)
    - Just the medium — no separate card reader or computer needed
    - Tell the agent "medium inserted": the agent confirms the device with `lsblk` and writes the image to it
-   - If you'd rather write it yourself, the exact command is in `tasks.md` 3.4 — again, point it at the `-preconfigured.img`
+   - If you'd rather write it yourself, the exact command is in `tasks.md` 3.5 — again, point it at the `-preconfigured.img`
 
 3. **Shut down the Pi:**
    ```
@@ -95,8 +97,8 @@ The agent will walk you through this, but here's what happens:
 
 ### 🔄 4. RESTORE — Human Step
 
-1. **Plug the backup NVMe back in** (if you removed it)
-   - Same enclosure, same USB-C port
+1. **Plug the backup NVMe back in** — it was deliberately unplugged for the whole flash (§2)
+   - Same enclosure, any free USB port (its device name may differ from last time — tell the agent so it can identify it by size and model)
 
 2. **Tell the agent "backup drive connected"**
    - Agent will:

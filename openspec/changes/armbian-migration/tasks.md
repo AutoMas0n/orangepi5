@@ -41,12 +41,13 @@
 
 ## 3. Download Armbian and Prepare Flash Medium
 
-> **👤 Human required**: the human actions in this section are 3.4 (insert the medium), 3.5 (boot it) and 3.8 (power-cycle); the destructive commands in 3.6–3.7 are run by the agent over SSH.
-> The agent downloads, verifies and **pre-seeds** the image (3.1–3.3), then runs the destructive flash commands (3.7) once the live environment is up.
+> **👤 Human required**: the human actions in this section are 3.5 (insert the medium), 3.6 (boot it) and 3.9 (power-cycle); the destructive commands in 3.7–3.8 are run by the agent over SSH.
+> The agent downloads, verifies, pre-seeds and stages the image (3.1–3.4), then runs the destructive flash commands (3.7–3.8) once the live environment is up.
 > **The first boot needs no console**: the pre-seeded image (3.3) brings up SSH, the `orangepi`/`orangepi` account and the static IP 192.168.2.113 on its own.
 > **No RAM-boot escape hatch**: the running kernel has `CONFIG_KEXEC` unset, so a boot medium (USB stick or SD card) is required — see design.md decision 7.
+> **The backup NVMe stays unplugged** from 3.5 to 3.8 and comes back for the restore (5.5/6.2). That is why the images were copied onto the Pi's own disk in 3.4: only the boot medium is present while the destructive steps run.
 
-- [x] 3.1 Download the Armbian Trixie current minimal image: `wget https://dl.armbian.com/orangepi5/Trixie_current_minimal` — **downloaded to `/mnt/backup-nvme/armbian-migration-backup/`**, not `~/Downloads` (that path is on the NVMe being wiped; the backup NVMe survives the wipe and is still readable while booted from the flash medium for 3.7). Resolves to `Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal.img.xz` (356,570,828 bytes)
+- [x] 3.1 Download the Armbian Trixie current minimal image: `wget https://dl.armbian.com/orangepi5/Trixie_current_minimal` — downloaded first to `/mnt/backup-nvme/armbian-migration-backup/` on the backup NVMe, then **copied to `/home/orangepi/Downloads/armbian-migration/`** on the Pi's own disk (3.4) so the backup drive can be unplugged for the flash. Resolves to `Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal.img.xz` (356,570,828 bytes)
 - [x] 3.2 Verify the download checksum — **verified** SHA256 `a7633627a54b6d8c5f03294cbf1b3b998d55b8e1e15cfb5296a3c440b981fcb5` (matches the published `.sha`). Detached `.asc` also verified: Good signature, RSA key `DF00FAF1C577104B50BF1D0093D6889F9F0E78D5` ("Igor Pecovnik <igor@armbian.com>")
 - [x] 3.3 Pre-seed the image for a headless first boot (done before flashing, on the pristine extraction):
   - user `orangepi` (uid/gid 1000, groups `sudo,video,render,audio,plugdev,netdev`), password `orangepi`; `root` password also `orangepi`
@@ -55,28 +56,48 @@
   - static IP via netplan: `/etc/netplan/10-dhcp-all-interfaces.yaml` (renderer `networkd`, Armbian's own file — **no** competing file) → `192.168.2.113/24`, gateway `192.168.2.1`, DNS `8.8.8.8`, matched by `name: "e*"` so the interface may be `eth0` **or** `end0`
   - hostname `orangepi` (image ships `orangepi5`), `/etc/hosts` updated
   - `/root/.not_logged_in_yet` deleted → the console first-login wizard never runs
-  - output: `Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img` (1,799,356,416 bytes), sha256 `4d40ba14efc2068ccd5e8c8725f756c420733d288b98ed01528a7d483ef7efae`
+  - output: `Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img` (1,799,356,416 bytes), sha256 `5af0cf0de5d6445d7f1ec24e6d66fdca603aac8bfb8a6a38e1917bf262f39058` — **authoritative**
+    - an earlier value (`4d40ba14…ef7ae`) was hashed *before* a final in-image tidy-up (`rm -rf /run/systemd/network /run/sshd`) mutated the filesystem, so it no longer described the file on disk. The re-hashed value above was confirmed on both the source and the copy
   - validated in-image with `netplan generate` and `sshd -t`; the pristine `.img.xz` is kept untouched next to it
-- [ ] 3.4 Write the **pre-seeded** image to the boot medium for the initial boot (USB stick preferred — the Pi's USB-A ports are free; an SD card works equally well):
+- [x] 3.4 Stage the artifacts on the Pi's own disk and eject the backup NVMe:
+  - copied to `/home/orangepi/Downloads/armbian-migration/`: the pre-seeded `.img` (verified byte-identical to the source, `5af0cf0d…`), the pristine `.img.xz` + `.sha` + `.asc`, `rkspi_loader.img` (4,194,304 B) and a regenerated `.img.sha256`
+  - `README-copies.txt` in that directory records the source device (`/dev/sda`, ASM246X serial `AAAABBBB3054`), the capture time, and the backup contents (`home-backup` 3.2 G, `media-backup` 133 G)
+  - the drive was unmounted, **powered off and removed from the USB bus** — it stays unplugged until the restore (5.5/6.2)
+  - ⚠️ **device names shuffle**: the enclosure came back as `sda` (a name that previously belonged to a RAID drive) and the stick is `sdd`. Always identify a device by size/model/serial, never by name; the sshd_config and gdisk steps above are name-independent for this reason
+- [x] 3.5 Write the **pre-seeded** image to the boot medium (USB stick preferred — the Pi's USB-A ports are free; an SD card works equally well):
      ```bash
      # agent, once the medium is inserted into the Pi and confirmed with lsblk
-     sudo dd if=/mnt/backup-nvme/armbian-migration-backup/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img \
+     sudo dd if=/home/orangepi/Downloads/armbian-migration/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img \
              of=/dev/<medium> bs=8M status=progress conv=fsync
      ```
-     `rkspi_loader.img` no longer needs copying anywhere: it is already on the backup NVMe (in `home-backup/Github/orangepi5/flash-image-ansible/roles/flash_firmware/files/`), which stays readable in the live environment for 3.7.
-     Alternative if the agent is not to touch the medium: write the same `.img` yourself from your own machine, then skip to 3.5.
-- [ ] 3.5 Boot from SD/USB flash medium
-- [ ] 3.6 Delete all partitions on NVMe:
+     Verify by read-back: `dd if=/dev/<medium> bs=8M count=215 2>/dev/null | head -c 1799356416 | sha256sum` must print `5af0cf0d…`. This overwrites the whole device.
+     Alternative if the agent is not to touch the medium: write the same `.img` yourself from your own machine, then skip to 3.6.
+     **Result:** written to `/dev/sdd` (SanDisk Ultra 32 GB — the ex-Ventoy stick, incl. its 9.6 GB ISO, as agreed). 1,799,356,416 B in 127 s (14.2 MB/s), read-back sha256 `5af0cf0d…` **MATCH**. The source hash was re-checked immediately before writing. `fdisk -l` shows the single 1.7 G ext4 partition at sector 32768; the GPT still has its backup header at the old 1.68 GiB offset (`GPT PMBR size mismatch`, `backup GPT table is not on the end of the device`) — expected for an image dd'd onto larger media, and repaired by Armbian on first boot (`sgdisk -e` + `growpart` in `armbian-resize-filesystem.service`) before the rootfs is grown to fill the device.
+- [ ] 3.6 Boot from the flash medium
+- [ ] 3.7 Delete all partitions on NVMe:
      ```bash
      echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/mtdblock0
      echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/nvme0n1
      ```
-- [ ] 3.7 Flash bootloader firmware, then write Armbian image:
+- [ ] 3.8 Flash bootloader firmware, then write the image — **the image and loader must be read off the old rootfs *before* it is destroyed**:
      ```bash
-     sudo dd if=/mnt/backup-nvme/armbian-migration-backup/home-backup/Github/orangepi5/flash-image-ansible/roles/flash_firmware/files/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc
-     sudo dd if=/mnt/backup-nvme/armbian-migration-backup/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img bs=8M of=/dev/nvme0n1 status=progress conv=fsync
+     # live environment booted from the medium; the backup NVMe is NOT plugged in.
+     # The source files live on the old rootfs — i.e. on the very device about to be overwritten.
+     sudo mkdir -p /mnt/old
+     sudo mount -o ro /dev/nvme0n1p2 /mnt/old
+     D=/mnt/old/home/orangepi/Downloads/armbian-migration
+     sudo cp $D/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img \
+             $D/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img.sha256 \
+             $D/rkspi_loader.img /dev/shm/
+     (cd /dev/shm && sha256sum -c Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img.sha256)   # expect 5af0cf0d…
+     sudo umount /mnt/old        # MANDATORY: never read the old rootfs while dd overwrites it
+     sudo dd if=/dev/shm/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc
+     sudo dd if=/dev/shm/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img bs=8M of=/dev/nvme0n1 status=progress conv=fsync
+     sync
      ```
-- [ ] 3.8 Shut down, remove flash medium, power on from NVMe
+     `/dev/shm` is tmpfs, so ~2 GB must fit in RAM (8 GB installed, ~6 GB free). If RAM is tight, copy the two files onto the live medium's own rootfs instead (it auto-grows to ~28 GB) — that is a different device from the NVMe, so it is safe to read during the write.
+     The new Armbian system grows the rootfs from 1.68 GiB to fill the 953 GB NVMe on its first boot (`armbian-resize-filesystem.service`) — no manual partitioning needed.
+- [ ] 3.9 Shut down, remove the flash medium, power on from NVMe
 
 ## 4. First Boot & Armbian Setup
 

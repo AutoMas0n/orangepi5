@@ -144,13 +144,19 @@ See proposal.md for the full motivation and scope.
 
 **Rejected alternative — boot a flash environment entirely from RAM:** this was the preferred no-extra-hardware option, but the running kernel (5.10.160-rockchip) has **`CONFIG_KEXEC` and `CONFIG_KEXEC_FILE` unset** and `kexec-tools` is not installed, so a kernel cannot be loaded from the running system. Without kexec the only hardware-free option is writing the NVMe *in place* from the running Ubuntu (quiesce to single-user, `swapoff`, `fsfreeze`, run a static busybox from `/dev/shm`, `dd` from the backup NVMe). That was rejected as the default because the filesystem being written is still mounted and live, and a mid-write failure leaves no bootable system — recovery would need maskrom mode + `rkdeveloptool` from a PC. Kept only as a documented last resort for a situation with no removable medium at all.
 
+**Staging and the unplugged-backup policy:** the image and `rkspi_loader.img` are copied onto the Pi's **own** disk (`/home/orangepi/Downloads/armbian-migration/`, verified byte-identical) and the backup NVMe is then unmounted, powered off and physically removed. From the write step until the restore, the only USB storage attached is the boot medium — so there is no way to aim a `dd` at the backup by accident, and no stale mount can be written to. The backup drive returns only for the restore (5.5/6.2). This is a deliberate response to a real incident: the enclosure was unplugged mid-use and the kernel, still holding the mount, logged ext4 journal-abort and read-only-remount errors for a device that was no longer present. Nothing was damaged, but it made clear that a mounted backup drive is a liability during a destructive phase.
+
+**Read the source before overwriting it:** in the live environment the image lives on the old rootfs — the partition being destroyed. So 3.8 mounts the old rootfs **read-only**, copies the image + its `.sha256` + the loader into `/dev/shm` (tmpfs, ~2 GB of 8 GB RAM), verifies the hash there, and only then unmounts and `dd`s. Streaming the image off a mounted filesystem while `dd` overwrites the underlying device is exactly the kind of read-after-write corruption this avoids.
+
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
 |---|---|
 | **Armbian image doesn't support RK3588 hardware transcoding** | Tested in advance — Armbian's rockchip kernel (6.x) includes MPP/VA-API drivers. Verify before flash. |
 | **Data loss during backup/restore** | Verify backups with `diff -r` or checksum comparison before wiping NVMe. The Ubuntu install on the NVMe is *not* preserved by this plan — rollback means re-flashing a boot medium and restoring from the backup NVMe, not booting the old system. |
-| **Pre-seeded image no longer matches the published checksum** | The flashed `.img` is a modified derivative: keep the pristine `.img.xz` + `.sha` + `.asc` (verified against Armbian's key) next to it, and record the derivative's own sha256 (`4d40ba14…ef7ae`). Verify the derivative, never the published digest, against what was flashed. |
+| **Pre-seeded image no longer matches the published checksum** | The flashed `.img` is a modified derivative: keep the pristine `.img.xz` + `.sha` + `.asc` (verified against Armbian's key) next to it, and record the derivative's own sha256. Verify the derivative, never the published digest, against what was flashed. |
+| **Hash recorded from a file that was still being modified** | Happened: the derivative's hash was taken *before* a last in-image tidy-up (`rm -rf /run/…`) mutated the filesystem, so the recorded digest (`4d40ba14…`) never matched the file on disk. The authoritative value is computed only **after the last write** — here `5af0cf0de5d6445d7f1ec24e6d66fdca603aac8bfb8a6a38e1917bf262f39058`, confirmed on both the source and the copy. Any hash in this plan is only trustworthy if it post-dates the final `umount` of the image. |
+| **Reading the source rootfs while `dd` overwrites it** | 3.8 copies the image into `/dev/shm` and unmounts the old rootfs *before* writing, so the read and the overwrite never overlap. |
 | **Static IP is never reachable on first boot** | Worst case the box needs a console after all. Mitigations: name-glob netplan match (works for `eth0`/`end0`), SSH key *and* password both enabled, and the plan keeps monitor+keyboard as a documented fallback in HUMAN.md. |
 | **Docker compose files reference absolute paths** | The `.env` files reference `~/Documents/...` — make sure the restored `/home/orangepi/Documents/` directory structure is identical. |
 | **Gluetun WireGuard config lost** | `wg0.conf` is outside the repo (gitignored). It's in `~/Github/orangepi5/wg0.conf` — confirm it's backed up with `/home`. The PIA credentials and key generation script need checking. |
@@ -181,8 +187,9 @@ See proposal.md for the full motivation and scope.
 
 ### Phase 2: Flash
 1. Pre-seed the image ahead of time: SSH, `orangepi`/`orangepi`, static IP, hostname (decision 6) — done before any hardware is touched
-2. Write the pre-seeded image to a boot medium (USB stick or SD), boot it, wipe the NVMe, flash `rkspi_loader.img` + the image
-3. First boot is headless: no console, no wizard — SSH is up at 192.168.2.113 immediately
+2. Stage the images on the Pi's own disk and unplug the backup NVMe (decision 7)
+3. Write the pre-seeded image to a boot medium (USB stick or SD), boot it, wipe the NVMe, flash `rkspi_loader.img` + the image
+4. First boot is headless: no console, no wizard — SSH is up at 192.168.2.113 immediately
 
 ### Phase 3: Restore
 1. Mount backup drive, restore `/home/`
