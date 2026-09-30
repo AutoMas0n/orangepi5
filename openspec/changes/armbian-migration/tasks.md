@@ -100,7 +100,6 @@
 - [x] 4.1 First boot verified: SSH to `orangepi@192.168.2.113` works, hostname `orangepi`, user uid 1000 in `sudo,video,render,audio,plugdev,netdev`, no console wizard ever appeared, timezone `Etc/UTC` (unchanged from the pre-migration system). Armbian also grants the first user passwordless sudo.
 - [x] 4.2 Static IP verified: `192.168.2.113/24` on **`end0`**, default route via `192.168.2.1`, DNS `8.8.8.8`. The interface really is `end0`, not `eth0` — precisely what the `name: "e*"` netplan match in 3.3 was for, and why the original `nmcli con mod eth0 …` version of this task would have failed twice over.
 - [x] 4.3 SSH verified: `ssh.service` active **and** enabled and reachable from the network.
-- [ ] 4.4 Run `apt update && apt upgrade -y` to bring system current
 - [x] 4.4 `apt update && apt upgrade -y` — 66 packages, incl. kernel **6.18.43 → 6.18.44**, `armbian-firmware`, `armbian-bsp-cli`, and `linux-u-boot-orangepi5-current`. Rebooted into 6.18.44 and verified the **SPI flash was not touched** by the u-boot package (first 4 MiB still `267d2019…`).
      Note: the reboot was needed even though `/var/run/reboot-required` was absent — the upgrade replaced `linux-image-current-rockchip64`, so the running kernel lost its modules and `docker.service` could not start until the matching kernel was booted.
 
