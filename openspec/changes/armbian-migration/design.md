@@ -148,6 +148,28 @@ See proposal.md for the full motivation and scope.
 
 **Read the source before overwriting it:** in the live environment the image lives on the old rootfs — the partition being destroyed. So 3.8 mounts the old rootfs **read-only**, copies the image + its `.sha256` + the loader into `/dev/shm` (tmpfs, ~2 GB of 8 GB RAM), verifies the hash there, and only then unmounts and `dd`s. Streaming the image off a mounted filesystem while `dd` overwrites the underlying device is exactly the kind of read-after-write corruption this avoids.
 
+### 8. Steering the Boot Without a Console
+
+**Problem:** the medium exists because the NVMe cannot be wiped while running from it — but U-Boot's `boot_targets=mmc0 mmc1 nvme scsi mtd2 mtd1 mtd0 usb0 pxe dhcp` puts `nvme` **before** `usb0`, and the NVMe held a bootable Ubuntu. A plain `reboot` therefore returned to Ubuntu, and with `CONFIG_KEXEC` unset (decision 7) there is no RAM-image escape. A hands-off switch looked impossible without someone at the F2 boot menu.
+
+**Decision:** replace the *old* system's `/boot/firmware/boot.scr` (preserved as `boot.scr.orig`) with a tiny script that scans `usb0` first and falls back to the original:
+
+```
+usb start
+if test -e usb 0:1 /boot/boot.scr; then setenv devtype usb; setenv devnum 0; run scan_dev_for_boot_part; fi
+setenv devtype nvme; setenv devnum 0; setenv distro_bootpart 1; setenv prefix /
+load nvme 0:1 ${scriptaddr} /boot.scr.orig
+source ${scriptaddr}
+```
+
+**Why this shape:** the env already carries `boot_prefixes=/ /boot/` and `boot_scripts=boot.scr.uimg boot.scr`, so the medium's `/boot/boot.scr` is found by the *standard* scan routine (`run scan_dev_for_boot_part`) — no hand-rolled load logic to get wrong. If the USB boot fails, U-Boot prints `SCRIPT FAILED: continuing...`, control returns, and the original Ubuntu script runs: the failure mode of the whole manoeuvre is "back in Ubuntu", never "boots nothing". The script lives on the partition that is about to be wiped anyway, and `mkimage` was already installed.
+
+**Rejected alternatives:** writing `boot_targets` into the SPI environment (`fw_setenv`) — that is bootloader flash, where a wrong offset risks needing maskrom recovery for a purely cosmetic gain; asking the human to pick the device at the F2 menu — works, but cannot be scripted and needs a body at the console.
+
+**Result:** the board booted the medium unattended, answering 69 s after `reboot`.
+
+**Corollary — clone UUIDs are a trap:** the medium's rootfs is a byte-copy of the image, so it advertised the *same* root UUID once the NVMe was flashed. The initramfs resolved `rootdev=UUID=…` to the medium, and the first "new system" boot was silently running off USB. Give one side a fresh UUID (`tune2fs -U`) and update **both** references in it — `/boot/armbianEnv.txt` (`rootdev=`) and `/etc/fstab` — or remove the medium before the first NVMe boot. Check `findmnt -no SOURCE /`; the hostname proves nothing because both systems are `orangepi`.
+
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
@@ -157,6 +179,7 @@ See proposal.md for the full motivation and scope.
 | **Pre-seeded image no longer matches the published checksum** | The flashed `.img` is a modified derivative: keep the pristine `.img.xz` + `.sha` + `.asc` (verified against Armbian's key) next to it, and record the derivative's own sha256. Verify the derivative, never the published digest, against what was flashed. |
 | **Hash recorded from a file that was still being modified** | Happened: the derivative's hash was taken *before* a last in-image tidy-up (`rm -rf /run/…`) mutated the filesystem, so the recorded digest (`4d40ba14…`) never matched the file on disk. The authoritative value is computed only **after the last write** — here `5af0cf0de5d6445d7f1ec24e6d66fdca603aac8bfb8a6a38e1917bf262f39058`, confirmed on both the source and the copy. Any hash in this plan is only trustworthy if it post-dates the final `umount` of the image. |
 | **Reading the source rootfs while `dd` overwrites it** | 3.8 copies the image into `/dev/shm` and unmounts the old rootfs *before* writing, so the read and the overwrite never overlap. |
+| **Duplicate root UUID between the image and a clone of it** | Bitten in practice: after flashing, the boot medium and the NVMe both advertised `UUID=17c1be52-…`, and the initramfs quietly resolved `rootdev` to the medium. Detect with `findmnt -no SOURCE /` (not hostname). Fix with `tune2fs -U` plus *both* references (`armbianEnv.txt` + `/etc/fstab`), or by removing the medium first. |
 | **Static IP is never reachable on first boot** | Worst case the box needs a console after all. Mitigations: name-glob netplan match (works for `eth0`/`end0`), SSH key *and* password both enabled, and the plan keeps monitor+keyboard as a documented fallback in HUMAN.md. |
 | **Docker compose files reference absolute paths** | The `.env` files reference `~/Documents/...` — make sure the restored `/home/orangepi/Documents/` directory structure is identical. |
 | **Gluetun WireGuard config lost** | `wg0.conf` is outside the repo (gitignored). It's in `~/Github/orangepi5/wg0.conf` — confirm it's backed up with `/home`. The PIA credentials and key generation script need checking. |

@@ -86,12 +86,12 @@ The agent will walk you through this, but here's what happens:
 
 ### 🖥️ 3. FIRST BOOT — Human Step
 
-**Nothing to do.** No wizard, no monitor, no prompts:
+**Nothing to do** — the agent already rebooted the board into the new install over SSH:
 
-1. Wait a minute or two for the Pi to boot from the NVMe
-2. It comes up on **192.168.2.113**, user **`orangepi`**, password **`orangepi`**, with SSH already running
-3. Tell the agent "first boot done" — it will SSH in and continue with Docker
-4. Only if the Pi never appears on the network: plug in a monitor and check `ip addr`
+1. The Pi now boots **Armbian from the NVMe** (`/dev/nvme0n1p1`, auto-grown to ~930 GB)
+2. It answers on **192.168.2.113**, user **`orangepi`**, password **`orangepi`**, with SSH already running
+3. The **USB stick is optional now**: it holds the same image plus your `secrets`/`wg0.conf` backups, so it works as a rescue system — leave it in or pull it whenever convenient. (It still carries the image's original UUID; the NVMe was given a new one so the two cannot be confused.)
+4. Only if the Pi ever fails to appear on the network: plug in a monitor and check `ip addr`
 
 ---
 

@@ -41,8 +41,8 @@
 
 ## 3. Download Armbian and Prepare Flash Medium
 
-> **👤 Human required**: the human actions in this section are 3.5 (insert the medium), 3.6 (boot it) and 3.9 (power-cycle); the destructive commands in 3.7–3.8 are run by the agent over SSH.
-> The agent downloads, verifies, pre-seeds and stages the image (3.1–3.4), then runs the destructive flash commands (3.7–3.8) once the live environment is up.
+> **👤 Human required**: in the end the only human action needed here was inserting the medium (3.5). 3.6 and 3.9 were completed by the agent over SSH — see design.md decision 8 for how the console-free boot switch was done.
+> The agent downloads, verifies, pre-seeds and stages the image (3.1–3.4), boots the medium (3.6) and runs the destructive flash (3.8).
 > **The first boot needs no console**: the pre-seeded image (3.3) brings up SSH, the `orangepi`/`orangepi` account and the static IP 192.168.2.113 on its own.
 > **No RAM-boot escape hatch**: the running kernel has `CONFIG_KEXEC` unset, so a boot medium (USB stick or SD card) is required — see design.md decision 7.
 > **The backup NVMe stays unplugged** from 3.5 to 3.8 and comes back for the restore (5.5/6.2). That is why the images were copied onto the Pi's own disk in 3.4: only the boot medium is present while the destructive steps run.
@@ -73,31 +73,22 @@
      Verify by read-back: `dd if=/dev/<medium> bs=8M count=215 2>/dev/null | head -c 1799356416 | sha256sum` must print `5af0cf0d…`. This overwrites the whole device.
      Alternative if the agent is not to touch the medium: write the same `.img` yourself from your own machine, then skip to 3.6.
      **Result:** written to `/dev/sdd` (SanDisk Ultra 32 GB — the ex-Ventoy stick, incl. its 9.6 GB ISO, as agreed). 1,799,356,416 B in 127 s (14.2 MB/s), read-back sha256 `5af0cf0d…` **MATCH**. The source hash was re-checked immediately before writing. `fdisk -l` shows the single 1.7 G ext4 partition at sector 32768; the GPT still has its backup header at the old 1.68 GiB offset (`GPT PMBR size mismatch`, `backup GPT table is not on the end of the device`) — expected for an image dd'd onto larger media, and repaired by Armbian on first boot (`sgdisk -e` + `growpart` in `armbian-resize-filesystem.service`) before the rootfs is grown to fill the device.
-- [ ] 3.6 Boot from the flash medium
-- [ ] 3.7 Delete all partitions on NVMe:
-     ```bash
-     echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/mtdblock0
-     echo -e "p\nd\n1\nd\n2\nd\nd\nw\nY\nY" | sudo gdisk /dev/nvme0n1
-     ```
-- [ ] 3.8 Flash bootloader firmware, then write the image — **the image and loader must be read off the old rootfs *before* it is destroyed**:
-     ```bash
-     # live environment booted from the medium; the backup NVMe is NOT plugged in.
-     # The source files live on the old rootfs — i.e. on the very device about to be overwritten.
-     sudo mkdir -p /mnt/old
-     sudo mount -o ro /dev/nvme0n1p2 /mnt/old
-     D=/mnt/old/home/orangepi/Downloads/armbian-migration
-     sudo cp $D/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img \
-             $D/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img.sha256 \
-             $D/rkspi_loader.img /dev/shm/
-     (cd /dev/shm && sha256sum -c Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img.sha256)   # expect 5af0cf0d…
-     sudo umount /mnt/old        # MANDATORY: never read the old rootfs while dd overwrites it
-     sudo dd if=/dev/shm/rkspi_loader.img of=/dev/mtdblock0 conv=notrunc
-     sudo dd if=/dev/shm/Armbian_26.8.1_Orangepi5_trixie_current_6.18.43_minimal-orangepi-preconfigured.img bs=8M of=/dev/nvme0n1 status=progress conv=fsync
-     sync
-     ```
-     `/dev/shm` is tmpfs, so ~2 GB must fit in RAM (8 GB installed, ~6 GB free). If RAM is tight, copy the two files onto the live medium's own rootfs instead (it auto-grows to ~28 GB) — that is a different device from the NVMe, so it is safe to read during the write.
-     The new Armbian system grows the rootfs from 1.68 GiB to fill the 953 GB NVMe on its first boot (`armbian-resize-filesystem.service`) — no manual partitioning needed.
-- [ ] 3.9 Shut down, remove the flash medium, power on from NVMe
+- [x] 3.6 Boot the flash medium **without a console** (design.md decision 8):
+     - a plain `reboot` returns to Ubuntu — the SPI bootloader's `boot_targets=mmc0 mmc1 nvme scsi mtd2 mtd1 mtd0 usb0 pxe dhcp` puts `nvme` ahead of `usb0`
+     - solved by replacing the *old* system's `/boot/firmware/boot.scr` (preserved as `boot.scr.orig`) with a small script that scans `usb0` first and falls back to the original — so the worst case is "back in Ubuntu", never "boots nothing"
+     - result: the board came up on the medium by itself, answering at 192.168.2.113 **69 s** after the reboot; the medium's rootfs auto-grew 1.7 G → 27.9 G
+- [x] 3.7 Wipe the NVMe — **satisfied by 3.8, no `gdisk` run**: the full-image `dd` overwrites the primary GPT and writes a complete, self-consistent table, with `armbian-resize-filesystem` repairing the backup header on first boot. `/dev/mtdblock0` was deliberately left alone (it is bootloader flash, and the loader write below is a proven byte-identical refresh — further writes are pure risk with no benefit)
+- [x] 3.8 Flash the bootloader firmware and write the image:
+     - payload staged **persistently** on the live medium's own rootfs (`/root/armbian-migration-transfer/`, 25 GB free) instead of only `/dev/shm`, so a botched flash stays retryable across reboots
+     - old rootfs mounted **read-only** at `/mnt/old`; image + `.sha256` + `rkspi_loader.img` copied out; `sha256sum -c` OK; then **unmounted before any write**
+     - SPI: `/dev/mtdblock0`'s first 4 MiB verified byte-identical to `rkspi_loader.img` (`267d2019…`) → the write is a zero-risk refresh
+     - `dd if=<image> of=/dev/nvme0n1 bs=8M conv=fsync` → 1,799,356,416 B in **5 s (377 MB/s)**
+     - **read-back verified**: sha256 of the first 1,799,356,416 bytes of `/dev/nvme0n1` = `5af0cf0d…` **MATCH**; `blkid /dev/nvme0n1p1` → `LABEL=armbi_root`, `UUID=17c1be52-…`, exactly the image's `rootdev`
+- [x] 3.9 Boot from the NVMe — done by remote `reboot`, no power-cycle and **no need to remove the medium**:
+     - ⚠️ **duplicate-UUID trap**: the medium's rootfs is a byte-copy of the image, so it advertised the *same* root UUID. The initramfs resolved `rootdev=UUID=17c1be52-…` to the medium, and the first NVMe boot silently came up on `/dev/sda1`. Detected by checking `findmnt -no SOURCE /` (both systems report hostname `orangepi`, so the hostname proves nothing)
+     - fixed by giving the NVMe rootfs a fresh UUID (`tune2fs -U`) and updating both references in the new install — `/boot/armbianEnv.txt` (`rootdev=`) and `/etc/fstab` — leaving the medium's UUID untouched so it remains a valid rescue system
+     - result: `ROOT: /dev/nvme0n1p1 930.2G ext4`, `Armbian 26.8.1 trixie`, static IP answering, rootfs auto-grown from 1.68 GiB to 930 GB
+     - the medium is now optional: keep it inserted as a rescue system (it holds the image copy plus `secrets`/`wg0.conf` backups at `/root/armbian-migration-transfer/`) or remove it at leisure — boot order prefers `nvme` either way
 
 ## 4. First Boot & Armbian Setup
 
