@@ -110,12 +110,12 @@ The agent will walk you through this, but here's what happens:
 3. **Wait for "stack is running"** — the agent will verify each service
 
 4. **Rebuild the configuration that was lost** — this is the part that could not be restored, because it was never in the backup (see design decision 10):
-   | What | Why it's manual |
+   | What | Status |
    |---|---|
    | **qBittorrent torrents** | the torrent list and `.fastresume` data are gone; every payload is still in `/media`, so re-add and let it recheck |
-   | **Jackett indexers** | indexer definitions and tracker credentials are gone; the *API key* was recovered, so nothing downstream needs changing |
-   | **qBittorrent WebUI password** | was never effective via the old `qBittorrent-data.conf` mount; set it once in the UI (or ask the agent) |
-   | **TorrentLeech** | needs your login for Jackett's indexer, or add `.torrent` files from the site (your passkey is embedded in them) |
+   | **Jackett indexers** | ✅ done — TorrentLeech re-added and tested (35 results). Note for next time: the login is your **username** `4543562a`, *not* the gmail address |
+   | **qBittorrent WebUI password** | ✅ done — `admin` / `admin`, settable again via `docker/qbittorrent/apply-preferences.sh` |
+   | **TorrentLeech** | ✅ done — connected in Jackett; your passkey is also embedded in any `.torrent` you download from the site |
 
 ---
 
@@ -156,3 +156,33 @@ If everything is still working:
 | **Services don't start** | Tell the agent which one — they'll check the Docker logs |
 | **Gluetun VPN not connecting** | The old `wg0.conf` endpoint was retired by PIA. Run `sudo ./docker/refresh-wireguard.sh` on the Pi (it mints a fresh config via PIA's current flow) — or rely on `vpn-watchdog.timer`, which does this automatically after ~30 minutes of a dead tunnel. |
 | **Everything is down after a reboot** | Should no longer happen: gluetun has `restart: unless-stopped` and `media-stack.service` starts the stack at boot. Check `systemctl status media-stack` and `journalctl -t vpn-watchdog`. |
+| **qBittorrent's search tab shows nothing** | Known defect in the current qBittorrent image, **not** a setup problem (design decision 16 / task 10.4). Use **Jackett's own search at http://192.168.2.113:9117**, which finds the same TorrentLeech releases. |
+
+---
+
+## 🤝 Hand-off Notes (for the next agent)
+
+**State of play:** migration is complete and the stack is healthy (5/5 containers, gluetun healthy, tunnel up, watchdog + boot service active). `migration/armbian` is pushed. The remaining work is short and specific.
+
+### The one unresolved defect: qBittorrent's search tab (task 10.4)
+
+Do **not** re-investigate from scratch — the work is done and written up in **design decision 16**. In short:
+
+* A search hangs ~50 s; qBittorrent forks itself and burns 99% of a core; the Python engine is **never** launched; the job ends `Stopped`/0 and `search/results` returns `Not Found`.
+* Everything it depends on is proven working when invoked directly as uid 30000 (`nova2.py --capabilities` emits the expected XML; `nova2.py jackett movies matrix` returns full TorrentLeech results). Python 3.14.7 is found (`Found Python executable` in qBittorrent's log). The engine is present in `~/docker-data/qBittorrent/nova3/` (mode 444, `# VERSION: 1.53` — qBittorrent rewrites it).
+* **Prime suspect:** the image build `lscr.io/linuxserver/qbittorrent:latest` = `5.2.4_v2.0.15-ls479`, built 2026-09-29.
+* **Suggested next step:** try one tag back (or the official `qbittorrentofficial/qbittorrent-nox`), run a single search, and see whether the fork-at-99%-CPU behaviour disappears. Keep the change reversible and pin whichever tag you settle on.
+* **Working substitute meanwhile:** Jackett's UI at `:9117`.
+
+### Then, in order
+
+1. **WireGuard headroom (optional).** 602 Mbps tunneled vs 801 Mbps raw, with one core at 85% — the lever is spreading RX across cores (RPS / multi-queue), deliberately not applied before the burn-in. See decision 14.
+2. **Docker auto-prune (task 9.2 / 10.6).** Still not installed. Prefer `docker system prune -f` **without** `--volumes`: the stack uses bind mounts, so the flag buys little and can delete volumes of any stopped container.
+3. **48-hour burn-in (task 7.13)** — then run section 8 of `tasks.md` in full: merge `migration/armbian` into `main`, push, delete the branch, and `openspec archive change armbian-migration`.
+
+### Things worth knowing
+
+* `scripts/verify-coverage.sh` proves every bind-mount source is inside the backup set — run it before any destructive step (`checked 8 bind-mount source(s); 0 problem(s)` today).
+* Both VPN-failure paths are automated: `vpn-watchdog.timer` restarts the stack after 3 failed checks and rotates the PIA server after 6; `docker/refresh-wireguard.sh` regenerates `wg0.conf` on demand.
+* Reproducible recipes live in the repo — `docker/qbittorrent/apply-preferences.sh`, `docker/jackett/apply-indexers.sh`, `scripts/backup.sh` — and credentials stay in the gitignored `secrets` file.
+* Be gentle with TorrentLeech: several rapid searches in a row look like abuse to a private tracker.

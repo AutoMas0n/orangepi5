@@ -2,4 +2,4 @@ data/
 secrets
 settings.json
 manual-connections/
-wg0.conf
+wg0.conf.pi-web/

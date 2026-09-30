@@ -220,6 +220,42 @@ source ${scriptaddr}
 - the recovered API key is kept as `docker/qbittorrent/reference/jackett.json`
 - **the rule:** if a piece of configuration is not in git, it does not exist. The live stack config (compose file, `.env`s, `run.sh`, `docker_pull.sh`, `refresh-wireguard.sh`, tuned `qBittorrent.conf`) must be committed (task 9.7) — today it is single-copy on the Pi, which is exactly the condition that lost the last set
 
+### 14. WireGuard throughput: measure against the same server, and know the hardware ceiling
+
+**Decision:** treat throughput numbers as path-dependent until proven otherwise, and record the actual ceiling of this board.
+
+The Orange Pi 5 has a **single 1 GbE** port (`end0`, negotiated 1000 Mb/s full duplex). The 3 Gbps at the modem is irrelevant to this box — ~940 Mbps of payload is the hard ceiling, and only the 5 Plus/5B (2.5 GbE) go higher. So the first reading of *389 Mbps through the tunnel vs 630 raw* was never a like-for-like comparison, and the later evidence shows why: on the same distant server a **single stream through the tunnel hit 570 Mbps while the "raw" single stream got 408** — the number was tracking the server and route, not the tunnel.
+
+Measured properly, four streams against one Canada-local server:
+
+| Path | Throughput |
+|---|---|
+| Raw (no VPN) | **801 Mbps** |
+| Through WireGuard | **602 Mbps** (75% of raw) |
+
+During the tunneled run `cpu0` sat at **85%** while aggregate CPU stayed low: the cost is RX softirq plus WireGuard crypto, concentrated on one core because **RPS is disabled** (`/sys/class/net/end0/queues/rx-0/rps_cpus` = `00`). The tunnel MTU was already **1440**, which is optimal for 1500-byte paths, so no MTU tuning is warranted.
+
+**Consequences:** kernel WireGuard with ARMv8 chacha20 on RK3588 lands around here *per flow*; the kernel `wireguard` module is loaded (`libchacha20poly1305`, `libcurve25519`), so this is the in-kernel path, not userspace. Torrents use many connections and aggregate better than a single speedtest stream, so real download throughput should exceed this single-flow figure. Spreading RX across cores (RPS/multi-queue, or pinning the softirq) is the obvious remaining lever — **deliberately not applied**: it is a system-wide networking change and not worth making on the eve of a burn-in for a client that is already performing well.
+
+### 15. TorrentLeech via Jackett: the login is the username, not the email
+
+**Decision:** record the two non-obvious facts that cost real time, so the next person does not repeat them.
+
+- **TorrentLeech authenticates on the bare username** (`4543562a`); submitting the email address is rejected with "Invalid Username/password combination". Diagnosis was confused for a while because a *captcha* is present on the login page and the tunnel IP was an easy suspect — it was neither: a direct login from the home IP (`174.93.12.62`) was rejected identically, and once the username was corrected the login returned HTTP 302 from both the home IP and the VPN exit.
+- **Jackett's admin API** needs a session cookie from `/UI/Login`, and its config payload is an **array of `{id, value}`** — `ConfigurationData.LoadConfigDataValuesFromJson` matches fields by `id`, so `{name, ...}` or a plain dict produces a cast error. Jackett **validates the login while saving**, so bad credentials return HTTP 500 and persist nothing; a good save returns 204.
+
+This is a good outcome for the tracker/VPN question: TorrentLeech works normally from PIA's Toronto exit, so there is no reason to move Jackett outside the tunnel.
+
+### 16. The qBittorrent search tab: a defect in the image, documented rather than papered over
+
+**Decision:** stop guessing, prove where the failure is, and hand it over with the evidence — the failing component is qBittorrent itself, not this stack.
+
+A search request hangs for ~50 seconds. During that time qBittorrent **forks itself** (`/app/qbittorrent-nox`, identical argv, parent = the qBittorrent process) and that child burns **99% of a core**; no `python3` child is ever created and Jackett records no incoming request. The request finally returns a job id, the job ends `Stopped` with 0 results, and `search/results` answers `Not Found`.
+
+Every layer underneath is demonstrably healthy, invoked exactly as qBittorrent would (uid 30000): `python3 nova2.py --capabilities` emits the precise XML the binary expects (`<capabilities><jackett>…`), `python3 nova2.py jackett movies matrix` returns the full TorrentLeech result set with working `/dl/torrentleech/...` links, the engine is present in the data directory at mode 444 with `# VERSION: 1.53` (qBittorrent rewrites it itself), and qBittorrent's own log says `Found Python executable. Name: "python3". Version: "3.14.7"`.
+
+The remaining suspect is the image: `lscr.io/linuxserver/qbittorrent:latest`, build `5.2.4_v2.0.15-ls479`, built **2026-09-29** — one day old at the time of writing, and the only component whose behaviour changed without anyone touching it. **Next step: pin/try another tag (or report upstream).** Until then the working substitute is Jackett's own UI on `:9117`, which performs the same TorrentLeech searches.
+
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
@@ -286,15 +322,17 @@ source ${scriptaddr}
 
 ## Post-Migration Work (confirmed)
 
-These items are outside the core migration flow but required before the system is fully healthy:
+These items are outside the core migration flow but were required before the system could be called healthy:
 
-- **PIA credentials**: `pia-wg-config` fails with authentication error on the current system. The existing `wg0.conf` still works, so the migration should proceed with backing it up as-is. After migration, debug and fix the PIA credentials so the config can be regenerated when needed.
-- **Docker auto-prune**: Add a cron job or systemd timer to regularly prune unused Docker images, volumes, and build cache. Prevent the 150 GB bloat from recurring. (See tasks section 9.)
-- **Copyparty to docker-compose**: The Copyparty container runs manually (not in any compose file). Add it to the docker-compose stack so it's managed alongside the other services.
+- ~~**PIA credentials**~~ — **done.** The old premise ("the existing `wg0.conf` still works") was false: its endpoint had been retired and the tunnel was handshaking with nobody. Regeneration now works via `docker/refresh-wireguard.sh` (decision 9).
+- ~~**Copyparty to docker-compose**~~ — **done.** It is a compose service in the restored repo (`docker/copyparty/`) and is started by `run.sh`.
+- **Docker auto-prune**: still to be installed (task 9.2 / 10.6). Note that `docker system prune --volumes -f` as originally written is more dangerous than it needs to be — the stack uses bind mounts, so unused *named* volumes are rare while the flag will happily delete volumes belonging to any stopped container.
+- **qBittorrent search tab**: broken in the current image; see decision 16 and task 10.4.
 
 ## Open Questions
 
-None currently.
+- **Does the search tab work on another qBittorrent image tag?** This is the one unresolved service-level defect (decision 16). Everything it depends on is proven working, so the test is cheap: run the same tag family one version back and repeat a single search.
+- **Should RX processing be spread across cores (RPS/multi-queue)?** It is the remaining WireGuard headroom lever (decision 14). Not applied deliberately — revisit only if real torrent throughput disappoints.
 
 ## Baseline: Pre-Migration System State
 

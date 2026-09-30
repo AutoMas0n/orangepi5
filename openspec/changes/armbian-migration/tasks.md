@@ -39,7 +39,7 @@
      ```
 - [x] 2.8 Make a note of which running containers need their images saved vs re-pulled (`sudo docker ps`)
 
-- [ ] 2.9 **Backup coverage check (mandatory before any destructive step).** Resolve every bind-mount source in every compose file and every directory the stack writes to, and assert each lies inside the declared backup set (`/home/orangepi`, `/media`, the repo, `secrets`, `wg0.conf`). Implement as `scripts/verify-coverage.sh` so it can be re-run. This task exists because its absence cost the stack its entire configuration: a plan-level *assumption* about where configs live is not evidence, and coverage must be derived from the configs themselves.
+- [x] 2.9 **Backup coverage check (mandatory before any destructive step).** Resolve every bind-mount source in every compose file and every directory the stack writes to, and assert each lies inside the declared backup set (`/home/orangepi`, `/media`, the repo, `secrets`, `wg0.conf`). Implement as `scripts/verify-coverage.sh` so it can be re-run. This task exists because its absence cost the stack its entire configuration: a plan-level *assumption* about where configs live is not evidence, and coverage must be derived from the configs themselves.
 
 ## 3. Download Armbian and Prepare Flash Medium
 
@@ -126,7 +126,7 @@
 - [x] 6.4 Verified: `gluetun`, `qbittorrent`, `jackett`, `stremio`, `copyparty` all up; gluetun healthy.
 - [x] 6.5 ~~Jellyfin~~ — **service retired** (decision 12). Compose dir deleted, removed from `run.sh` and the pull list; the image and its state are no longer part of this system.
 - [x] 6.6 qBittorrent WebUI HTTP 200 (Jackett 301, copyparty 200) — all reachable through gluetun's network namespace.
-- [x] 6.7 VPN — **WireGuard, not OpenVPN**: PIA's provisioning changed (decision 9). `wg0.conf` minted with `docker/refresh-wireguard.sh`; endpoint `45.89.249.18:1337`, exit IP `45.89.249.204` (Toronto), **389 Mbps** through the tunnel vs 630 Mbps raw, and qBittorrent's egress confirmed through it.
+- [x] 6.7 VPN — **WireGuard, not OpenVPN**: PIA's provisioning changed (decision 9). `wg0.conf` minted with `docker/refresh-wireguard.sh`; endpoint `45.89.249.18:1337`, exit IP `45.89.249.204` (Toronto), and qBittorrent's egress confirmed through it. The first throughput reading (389 Mbps) was later shown to be a single-stream/server artifact — see decision 14.
 - [x] 6.8 Resilience — `gluetun` had **no restart policy** while the other four had `unless-stopped`, so a reboot would have brought Docker up and left the entire VPN stack down. Fixed, plus `media-stack.service` (ordered start at boot) and `vpn-watchdog.timer` (restarts the stack, then rotates the server). Proven by an unattended reboot: gluetun healthy, tunnel up, all 5 containers back. See decision 11.
 
 ## 7. Verification & Validation
@@ -143,11 +143,11 @@ Run each check against the Baseline in `design.md`.
 - [x] 7.8 Jackett HTTP 301 at http://192.168.2.113:9117 — with its **original API key restored** (decision 10)
 - [x] 7.9 5 images present (Jellyfin's retired)
 - [x] 7.10 Cron restored with absolute paths: `docker_pull.sh` and `run.sh` daily. `docker_pull.sh` was mode 644, so the old entry never ran — now executable. No watchtower in the baseline.
-- [ ] 7.11 Storage: single 944 G partition, rootfs grown from 1.68 GiB — **still to confirm** that the BTRFS RAID1 fstab entries stay absent (drives remain powered off)
-- [ ] 7.12 **Coverage check passes** (`scripts/verify-coverage.sh`, task 2.9) — the check whose absence caused the loss
+- [x] 7.11 Storage: single 944 G partition, rootfs grown from 1.68 GiB. **Confirmed**: `/etc/fstab` holds only the ext4 root and `tmpfs /tmp` — no BTRFS/RAID lines (the drives stay powered off).
+- [x] 7.12 **Coverage check passes** (`scripts/verify-coverage.sh`, task 2.9) — the check whose absence caused the loss. Verified: `checked 8 bind-mount source(s); 0 problem(s)`; backup set = repo, `~/docker-data`, `/media`, `~/.ssh`.
 - [ ] 7.13 Run the **48-hour burn-in** before closing the rollback window
 - [x] 7.14 **Reboot test**: unattended `systemctl reboot` → all 5 containers return, gluetun healthy, tunnel up, WebUIs answering (decision 11)
-- [ ] 7.15 The live stack config is committed to git — it is currently **single-copy on the Pi**, which is precisely how it was lost the first time (task 9.7)
+- [x] 7.15 The live stack config is committed to git — no longer single-copy on the Pi (task 9.7)
 
 ## 8. Finalization (after 48-hour burn-in passes)
 
@@ -166,5 +166,16 @@ Run each check against the Baseline in `design.md`.
 - [x] 9.4 Copyparty is already a compose service in the restored repo (`docker/copyparty/`) and is started by `run.sh` — no manual container required
 - [ ] 9.5 Clean up old backup drives
 - [x] 9.6 Repository tidy-up (decision 13): deleted the stale nested `docker/docker/` duplicate, the typo'd `docker/qbittorrent/qbittorent/` directory (its recovered API key kept as `docker/qbittorrent/reference/jackett.json`), the dropped Jellyfin compose, and the inert `qBittorrent-data.conf` mount + file — qBittorrent reads `qBittorrent.conf`, so that mount never took effect, exactly as the file's own comment suspected
-- [ ] 9.7 **Capture the live stack config into git** — compose file, `.env`s, `run.sh`, `docker_pull.sh`, `refresh-wireguard.sh`, docs, and the tuned `qBittorrent.conf`. Today the working config exists only on the Pi, which is how it was lost the first time (task 7.15)
-- [ ] 9.8 **Rework the state layout** (decision 10): one obvious state directory for all services, absolute paths in every `.env`, and the coverage check wired into the backup procedure
+- [x] 9.7 **Capture the live stack config into git** — compose file, `.env`s, `run.sh`, `docker_pull.sh`, `refresh-wireguard.sh`, docs, the tuned `qBittorrent.conf`, and the runnable recipes `docker/qbittorrent/apply-preferences.sh`, `docker/jackett/apply-indexers.sh`, `scripts/verify-coverage.sh`, `scripts/backup.sh` (task 7.15)
+- [x] 9.8 **Rework the state layout** (decision 10) — done: one state root (`QBIT_CONFIG_PATH=/home/orangepi/docker-data`, mounted at `/config`, each service owning a subdirectory), absolute paths in every `.env`, the misleading `/root/Documents` path gone, and the coverage check wired in. Verified against the live containers: `docker inspect` shows exactly the compose's mounts.
+
+## 10. Service Configuration Rebuilt (post-loss)
+
+The previous configuration could not be restored (decision 10), so this is the rebuild — recorded here so it can be *reproduced* rather than re-guessed.
+
+- [x] 10.1 qBittorrent tuned through its WebAPI: `admin`/`admin` login (PBKDF2 accepted, session 204), 500/100 connections, 20/10 uploads, queueing 5/5/10, DHT/PEX/LSD off, encryption *prefer*, UPnP off, unlimited rates, `/downloads` + `/downloads/incomplete`. Recipe: `docker/qbittorrent/apply-preferences.sh`. ⚠️ The WebUI is reachable by anything on the LAN — the weak password is accepted deliberately, not overlooked.
+- [x] 10.2 **TorrentLeech indexer configured in Jackett and verified end to end**: a `matrix` Torznab search returns 35 releases. The login is the **bare username** (`4543562a`), *not* the email — and because Jackett validates the login while saving, the email form fails as an opaque HTTP 500 with nothing persisted. Recipe: `docker/jackett/apply-indexers.sh`, notes in `docker/jackett/README.md`.
+- [x] 10.3 Jackett admin-API quirks recorded: the config payload is an **array of `{id, value}`** (fields matched by `id` in `ConfigurationData.LoadConfigDataValuesFromJson`), and every request needs a session cookie from `/UI/Login`.
+- [ ] 10.4 **qBittorrent's search tab is broken — cause is inside qBittorrent, not our configuration.** Evidence: `search/start` blocks for ~50 s while qBittorrent **forks itself** (`/app/qbittorrent-nox`, same argv, parent = qBittorrent) and burns **99% of one core**, then returns a job that ends `Stopped`/0 results; `search/results` answers `Not Found`; no `python3` child ever appears and Jackett's log records no request from qBittorrent. Everything the tab depends on works when invoked directly as uid 30000: `python3 nova2.py --capabilities` emits exactly the XML qBittorrent wants, and `python3 nova2.py jackett movies matrix` returns the full result set with valid `/dl/torrentleech/...` links. Engine ✓ (present in the data dir; qBittorrent rewrites it itself, mode 444, `# VERSION: 1.53`), plugin ✓, Jackett ✓, TorrentLeech ✓, Python 3.14.7 ✓ (qBittorrent logs `Found Python executable`). Suspect the brand-new image build `5.2.4_v2.0.15-ls479` (built 2026-09-29). **Next step: try an older/other qBittorrent image tag, or report upstream. Workaround until then: search in Jackett's own UI at `:9117`, which returns the same TorrentLeech results.**
+- [x] 10.5 WireGuard throughput characterised honestly — see decision 14. 801 Mbps raw vs 602 Mbps tunneled on the same server, with one core at 85%: CPU/softirq-bound on a single RX queue, not link- or provider-bound.
+- [ ] 10.6 Docker auto-prune (task 9.2) still to be installed.
