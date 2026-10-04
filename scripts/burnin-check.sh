@@ -8,7 +8,7 @@
 # A "restart count grew" delta is reported only when a baseline exists.
 set -u
 
-SERVICES="gluetun qbittorrent jackett stremio copyparty"
+SERVICES="gluetun qbittorrent jackett stremio"
 BASE="$HOME/burnin-baseline"
 LOG="$HOME/docker-data/burnin.log"
 FAIL=0
@@ -49,7 +49,7 @@ snapshot(){
   esac
 
   # --- Web UIs ----------------------------------------------------------
-  for p in 8080:qbittorrent 9117:jackett 3923:copyparty; do
+  for p in 8080:qbittorrent 9117:jackett; do
     port=${p%%:*}; name=${p##*:}
     code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "http://127.0.0.1:$port/" 2>/dev/null)
     case "$code" in

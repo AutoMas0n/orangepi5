@@ -127,10 +127,8 @@ Check these URLs in your browser:
 |---|---|---|
 | qBittorrent | http://192.168.2.113:8080 | WebUI loads |
 | Jackett | http://192.168.2.113:9117 | Jackett dashboard |
-| Copyparty | http://192.168.2.113:3923 | file listing |
 
-(Jellyfin was retired — see decision 12.)
-<!-- Copyparty is a manual service and is not started during migration -->
+(Jellyfin was retired — see decision 12. Copyparty was retired too — see decision 17; use `rclone` on the host instead. The stack is now 4 services.)
 
 All good? Tell the agent "verified" — they'll run the 48-hour burn-in.
 
@@ -162,7 +160,7 @@ If everything is still working:
 
 ## 🤝 Hand-off Notes (for the next agent)
 
-**State of play:** migration is complete and the stack is healthy (5/5 containers, gluetun healthy, tunnel up, watchdog + boot service active). `migration/armbian` is pushed. The remaining work is short and specific.
+**State of play:** migration is complete and the stack is healthy (**4/4** containers — copyparty retired 2026-10-04, decision 17; gluetun healthy, tunnel up, watchdog + boot service active). `migration/armbian` is pushed. The remaining work is short and specific.
 
 ### Accepted limitation: qBittorrent's search tab (task 10.4)
 

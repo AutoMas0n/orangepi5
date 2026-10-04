@@ -6,7 +6,6 @@ images=(
   "lscr.io/linuxserver/jackett"
   "lscr.io/linuxserver/qbittorrent"
   "stremio/server"
-  "copyparty/ac"
   # Add or remove images as needed
 )
 

@@ -258,6 +258,20 @@ The remaining suspect is the image: `lscr.io/linuxserver/qbittorrent:latest`, bu
 
 **Resolved as an accepted limitation** (user decision, 2026-09-30): the image-swap route was **declined**, so this defect is deliberately not pursued further and nothing is pending on it. The supported substitute — and where searches should be run — is **Jackett's own UI on `:9117`**, which performs the same TorrentLeech searches.
 
+### 17. Retiring Copyparty (rclone does the job)
+
+**Decision:** remove Copyparty from the stack. `rclone` is already installed on the host (`/usr/bin/rclone`) and covers the same ground — it serves and mounts directories directly, with no extra container, no WebDAV port and no second copy of the access story. It had no state worth preserving: its `/cfg` volume held 56 KB of defaults and the service was read-only against `/media`. (User decision, 2026-10-04, during the burn-in window.)
+
+**What was removed:**
+
+- the `docker/copyparty/` compose directory, and its line in `docker/run.sh` — so the stack is now **4 services** (gluetun, qbittorrent, jackett, stremio), not 5
+- `copyparty/ac` from `docker/docker_pull.sh`
+- the container and image on the Pi (the image was unused afterwards, so it is a candidate for the weekly prune)
+- `/home/orangepi/docker-data/copyparty` (56 KB; nothing in it was unique) and port `3923`
+- its rows in `scripts/burnin-check.sh`, the verify list and the docs
+
+**Consequences:** anything that pointed at `http://192.168.2.113:3923` — a browser bookmark, a `davfs` mount, an rclone remote — needs repointing at whatever `rclone serve` now exposes. The coverage rule is unaffected: `scripts/verify-coverage.sh` derives its list from the compose files, so a deleted service leaves the backup set smaller, never stale. Recorded as decision 12 was for Jellyfin, and by the same rule: *retire a service deliberately rather than leaving it as a half-working copy.*
+
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
@@ -327,7 +341,7 @@ The remaining suspect is the image: `lscr.io/linuxserver/qbittorrent:latest`, bu
 These items are outside the core migration flow but were required before the system could be called healthy:
 
 - ~~**PIA credentials**~~ — **done.** The old premise ("the existing `wg0.conf` still works") was false: its endpoint had been retired and the tunnel was handshaking with nobody. Regeneration now works via `docker/refresh-wireguard.sh` (decision 9).
-- ~~**Copyparty to docker-compose**~~ — **done.** It is a compose service in the restored repo (`docker/copyparty/`) and is started by `run.sh`.
+- ~~**Copyparty to docker-compose**~~ — **done, then retired.** It was a compose service in the restored repo (`docker/copyparty/`) and started by `run.sh`; on 2026-10-04 it was **removed from the stack** because rclone covers the same ground natively — see decision 17.
 - ~~**Docker auto-prune**~~ — **done (task 9.2 / 10.6).** Weekly `docker system prune -f` in root cron (Sun 04:30), logging to `/var/log/docker-prune.log`. Installed plain, **not** `--volumes -f` as originally written: the stack uses bind mounts, so unused *named* volumes are rare while the flag will happily delete volumes belonging to any stopped container. First run reclaimed 164 MB of dangling layers plus the retired Jellyfin image (797 MB), taking reclaimable space from 1.885 GB to 66 MB.
 - **qBittorrent search tab**: broken in the current image; see decision 16 and task 10.4.
 
