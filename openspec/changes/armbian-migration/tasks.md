@@ -145,7 +145,7 @@ Run each check against the Baseline in `design.md`.
 - [x] 7.10 Cron restored with absolute paths: `docker_pull.sh` and `run.sh` daily. `docker_pull.sh` was mode 644, so the old entry never ran — now executable. No watchtower in the baseline.
 - [x] 7.11 Storage: single 944 G partition, rootfs grown from 1.68 GiB. **Confirmed**: `/etc/fstab` holds only the ext4 root and `tmpfs /tmp` — no BTRFS/RAID lines (the drives stay powered off).
 - [x] 7.12 **Coverage check passes** (`scripts/verify-coverage.sh`, task 2.9) — the check whose absence caused the loss. Verified: `checked 8 bind-mount source(s); 0 problem(s)`; backup set = repo, `~/docker-data`, `/media`, `~/.ssh`.
-- [ ] 7.13 Run the **48-hour burn-in** before closing the rollback window
+- [ ] 7.13 Run the **48-hour burn-in** before closing the rollback window — **started 2026-10-04T19:20Z, ends 2026-10-06T19:20Z**. Probe: `scripts/burnin-check.sh` (`--baseline` recorded restart counts at zero; run with `--log` to append to `~/docker-data/burnin.log`). First snapshot clean.
 - [x] 7.14 **Reboot test**: unattended `systemctl reboot` → all 5 containers return, gluetun healthy, tunnel up, WebUIs answering (decision 11)
 - [x] 7.15 The live stack config is committed to git — no longer single-copy on the Pi (task 9.7)
 
