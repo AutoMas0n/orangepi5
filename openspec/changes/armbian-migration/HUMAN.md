@@ -112,7 +112,7 @@ The agent will walk you through this, but here's what happens:
 4. **Rebuild the configuration that was lost** — this is the part that could not be restored, because it was never in the backup (see design decision 10):
    | What | Status |
    |---|---|
-   | **qBittorrent torrents** | the torrent list and `.fastresume` data are gone; every payload is still in `/media`, so re-add and let it recheck |
+   | **qBittorrent torrents** | ✅ done — 7 releases are seeding again with 0 bytes re-downloaded; 5 cannot be seeded (release not on TorrentLeech) and `Fallout S01` is partial (6 of 8 episodes). Closed as-is on 2026-10-04; details in `RESTORE-TORRENTS.md` |
    | **Jackett indexers** | ✅ done — TorrentLeech re-added and tested (35 results). Note for next time: the login is your **username** `4543562a`, *not* the gmail address |
    | **qBittorrent WebUI password** | ✅ done — `admin` / `admin`, settable again via `docker/qbittorrent/apply-preferences.sh` |
    | **TorrentLeech** | ✅ done — connected in Jackett; your passkey is also embedded in any `.torrent` you download from the site |
@@ -176,7 +176,7 @@ If everything is still working:
 ### Then, in order
 
 1. **WireGuard headroom (optional).** 602 Mbps tunneled vs 801 Mbps raw, with one core at 85% — the lever is spreading RX across cores (RPS / multi-queue), deliberately not applied before the burn-in. See decision 14.
-2. **Docker auto-prune (task 9.2 / 10.6).** Still not installed. Prefer `docker system prune -f` **without** `--volumes`: the stack uses bind mounts, so the flag buys little and can delete volumes of any stopped container.
+2. ~~**Docker auto-prune (task 9.2 / 10.6).**~~ **Done** — weekly root cron, `docker system prune -f` **without** `--volumes` (the stack uses bind mounts, so the flag buys little and can delete volumes of any stopped container). First run reclaimed 164 MB of dangling layers plus the retired Jellyfin image (797 MB).
 3. **48-hour burn-in (task 7.13)** — then run section 8 of `tasks.md` in full: merge `migration/armbian` into `main`, push, delete the branch, and `openspec archive change armbian-migration`.
 
 ### Things worth knowing

@@ -1,7 +1,8 @@
 # Restoring the Torrent List (procedure for the next agent)
 
-> **Audience:** the agent continuing this migration. **Status:** method proven end to end; **1 of ~15** folders restored.
+> **Audience:** the agent continuing this migration. **Status:** bulk restore done 2026-09-30 — **7 torrents seeding**, 5 permanent misses, 1 partial (Fallout, awaiting decision).
 > **Read first:** design decision 10 (why the configuration is gone) and section 4 of `HUMAN.md`.
+> A working helper implementing this procedure is `restore_one.py` next to this file.
 
 ## 1. What can and cannot be restored
 
@@ -10,7 +11,7 @@
 | **Cannot be restored** | The torrent *list* itself. Torrent metadata (`BT_backup/*.torrent`) and the `.fastresume` files lived in the configuration that was never backed up. `/root/Documents` is gone, `BT_backup/` is empty, and the old system was wiped. Do not spend time looking. |
 | **Can be restored** | The **seeding state** of content still on disk: re-fetch each release's `.torrent` from TorrentLeech (via Jackett) and re-add it so qBittorrent rechecks the existing files and starts seeding again — **without re-downloading** (26.8 GiB verified at 0 bytes downloaded). |
 
-**The user's stance so far:** *"prove you can do it first with just Gilmore Girls, don't spam TorrentLeech, it's a private tracker."* The method is proven (§4). **Ask before bulk-restoring** — see §6 for the open decisions.
+**The user's stance:** *"prove you can do it first with just Gilmore Girls, don't spam TorrentLeech, it's a private tracker."* The method is proven (§4) and the user then approved restoring the rest. Keep the tracker request budget in mind anyway (§2.1).
 
 ## 2. Ground rules (non-negotiable)
 
@@ -117,11 +118,13 @@ PY
 ```bash
 CJ=/tmp/qb.jar; rm -f $CJ
 curl -s -c $CJ -o /dev/null -d 'username=admin&password=admin' "$QB/api/v2/auth/login"
-curl -s -b $CJ -F "torrents=@/tmp/pick.torrent" -F "savepath=/downloads" \
-     -F "paused=true" -F "skip_checking=false" "$QB/api/v2/torrents/add" >/dev/null
-sleep 4
-H=$(curl -s -b $CJ "$QB/api/v2/torrents/info" | python3 -c "
-import json,sys; d=json.load(sys.stdin); print(d[-1]['hash'] if d else '')")
+# qBittorrent 5.x: `paused` is gone, use `stopped`; and for TGx-style flattened
+# folders (torrent root name != folder name) `contentLayout=NoSubfolder` +
+# savepath=/downloads/<folder> is what makes the recheck find the files.
+RESP=$(curl -s -b $CJ -F "torrents=@/tmp/pick.torrent" \
+     -F "savepath=/downloads/<folder>" -F "contentLayout=NoSubfolder" \
+     -F "stopped=true" -F "skip_checking=false" "$QB/api/v2/torrents/add")
+H=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin)['added_torrent_ids'][0])")
 curl -s -b $CJ --data-urlencode "hashes=$H" "$QB/api/v2/torrents/recheck" >/dev/null
 # poll every ~8 s: state=checkingDL, downloaded must stay 0
 curl -s -b $CJ "$QB/api/v2/torrents/info?hashes=$H" | python3 -c "
@@ -129,48 +132,78 @@ import json,sys; t=json.load(sys.stdin)[0]
 print(f\"{t['progress']*100:.2f}% {t['state']} downloaded={t['downloaded']}B\")"
 ```
 
-* `progress == 100.00` → resume, then confirm the tracker: `curl -s -b $CJ "$QB/api/v2/torrents/trackers?hash=$H"` → `status=2` means **working**.
-* anything else → `curl -s -b $CJ --data-urlencode "hashes=$H" --data "deleteFiles=false" "$QB/api/v2/torrents/delete"` and report a miss.
+* `progress == 100.00` → **start** it (`/api/v2/torrents/start`; 5.x renamed `resume`→`start`), reannounce, then confirm the tracker: `/api/v2/torrents/trackers?hash=$H` → `status=2` means **working** (it can sit at `1` = not-contacted-yet for a minute; reannounce and retry).
+* anything else → delete with `deleteFiles=false` and report a miss; also clean `/media/incomplete/<torrent name>` (partial data) if it was created.
 
-## 5. Pitfall that will bite you: Torznab reports `size = 0`
+## 5. Pitfall that will bite you: verify against the `.torrent`, not Torznab
 
-Jackett's Torznab feed returns **`t:size` as 0** for TorrentLeech results. A naive size check therefore always fails and you would wrongly refuse every valid match. **Verify against the `.torrent`'s own metadata instead** — total bytes *and* file count, both compared with `du -sb` / `find -type f`. The proven run matched exactly: `28,787,057,180 bytes / 22 files`, delta `0.00%`, and the recheck reached 100% with `downloaded=0B`.
+Jackett's Torznab feed has been observed returning **`t:size` as 0** for TorrentLeech results, which would make a naive size check fail and wrongly refuse every valid match. In the 2026-09-30 runs the size attribute *was* populated, so do not rely on it either way. **Always verify against the `.torrent`'s own metadata** — total bytes *and* file count, both compared with `du -sb` / `find -type f`. Examples from the proven run: `28,787,057,180 bytes / 22 files` delta `0.00%`, and `5,887,690,064 bytes / 26 files` delta `0.00%`, both rechecked to 100% with `downloaded=0B`.
 
-## 6. Inventory — state as of 2026-09-30
+A size+count match is necessary but **not sufficient** when the release was repacked: TGx strips/renames files, so the on-disk names can differ from the tracker torrent. The recheck is the final arbiter — it must reach 100.00% *before* you start the torrent.
 
-| Folder | Size | Files | Status |
+## 6. Inventory — state as of 2026-09-30 (bulk restore complete)
+
+**7 torrents seeding** (all 100.00%, `downloaded=0B`, tracker `status=2`):
+
+| Folder | Size | Files | Hash |
 |---|---|---|---|
-| `Gilmore Girls (2000) S05 1080p WEBRip 10bit EAC3 2 0 x265-iVy` | 27 G | 22 | ✅ **DONE — seeding** (hash `81871210f036a16b07bed7995ceeb897ee977d63`, tracker working) |
-| `Fallout.2024.S01.COMPLETE.1080p.AMZN.WEB.h264-MIXED[TGx]` | 22 G | 6 | to do |
-| `The.Bear.S02.COMPLETE.1080p.HULU.WEB.h264-EDITH[TGx]` | 15 G | 12 | to do |
-| `Gilmore Girls` *(the other set — name is ambiguous, rely on §5)* | 29 G | 22 | to do |
-| `Super.Mario.Odyssey.NSW-BigBlueBox` | 5.5 G | 26 | to do — may not be on TL |
-| `Animal_Crossing_New_Horizons_Update_v2.0.6_NSW-VENOM` | 4.1 G | 89 | to do — may not be on TL |
-| `28 Days And Weeks Later 2002,2007 1080p BluRay HEVC x265 5.1 BONE` | 3.8 G | 2 | to do |
-| `Nexus - Yuval Noah Harari [B0CSZ1LMVX]` | 954 M | 2 | to do |
-| `Animal_Crossing_New_Horizons_Happy_Home_Paradise_DLC_NSW-SUXXORS` | 597 M | 15 | to do — may not be on TL |
-| `Gabor Mate, Daniel Mate - 2022 - The Myth of Normal (Health)` | 501 M | 9 | to do |
-| `The Body Keeps the Score (2021)` | 447 M | 3 | to do |
-| `untitled-goose-game_unofficial_linux_port_` | 323 M | 9 | to do — probably not on TL |
-| `Enshittification- Why Everything Suddenly Got Worse and What to Do About It [2025]` | 294 M | 1 | to do |
+| `Gilmore Girls (2000) S05 1080p WEBRip 10bit EAC3 2 0 x265-iVy` | 27 G | 22 | `81871210f036a16b07bed7995ceeb897ee977d63` |
+| `The.Bear.S02.COMPLETE.1080p.HULU.WEB.h264-EDITH[TGx]` | 15 G | 12 | `341b3861b49b1c159cbc0b55d28edc51df9cdc35` |
+| `Super.Mario.Odyssey.NSW-BigBlueBox` | 5.5 G | 26 | `e634e8e36625c8a1e5269f9294ef3b92264c7569` |
+| `Animal_Crossing_New_Horizons_Update_v2.0.6_NSW-VENOM` | 4.1 G | 89 | `2512169d0a801f578169c7730d82838ba32e890a` |
+| `Nexus - Yuval Noah Harari [B0CSZ1LMVX]` | 954 M | 2 | `b34497f3e291fcfecaaee4d86a1e2785032893ba` |
+| `Animal_Crossing_New_Horizons_Happy_Home_Paradise_DLC_NSW-SUXXORS` | 597 M | 15 | `12345674672f0845c42aa14ad667c8e3b8dd76bd` |
+| `The Body Keeps the Score (2021)` | 447 M | 3 | `2bc4265f14a21b26fe8ac0803ce2c013f224d00b` |
 
-**Needs a human decision before touching** — these look like leftovers, not releases:
+**Cannot be seeded** — the exact release is not on TorrentLeech. No download was started:
+
+| Folder | Size | Reason |
+|---|---|---|
+| `Gilmore Girls` (the other set = **S04**, complete 22 eps) | 29 G | files are `…HEVC-MONOLITH`; TL only has Rajput42 / iVy / BORDURE S04 groups (different names → recheck would fail) |
+| `28 Days And Weeks Later 2002,2007 1080p BluRay HEVC x265 5.1 BONE` | 3.8 G | TL has only the **720p** BONE pack |
+| `Gabor Mate, Daniel Mate - 2022 - The Myth of Normal (Health)` | 501 M | not on TL (only other Gabor Maté titles) |
+| `untitled-goose-game_unofficial_linux_port_` | 323 M | TL has only PS4 releases |
+| `Enshittification- …` | 294 M | disk is the **m4b audiobook**; TL has only the epub |
+
+**Partial — needs a human decision:**
 
 | Item | Size | Note |
 |---|---|---|
-| `1337x` | 12 G | odd name, 16 files — scratch dir? |
-| `AAAA` | 7.6 G | odd name, 2 files — scratch dir? |
-| `incomplete` | 6.2 G | orphaned partial data from the old client; **cannot** be resumed without its metadata |
+| `Fallout.2024.S01.COMPLETE.1080p.AMZN.WEB.h264-MIXED[TGx]` | 22 G | disk holds only **E03–E08** (6 of 8). The TL pack `Fallout 2024 S01 1080p WEB h264-MIXED` is 32.3 G / 9 files — re-adding it paused would recheck to ~72% and then **re-download ~9.5 G** to complete the season. Not done without approval. |
+
+**Leftovers — deleted 2026-09-30** (user approved; ~6.2 G reclaimed):
+
+| Item | Size | Note |
+|---|---|---|
+| `incomplete/` | 6.2 G | orphaned partial data from the old client; could never be resumed without its metadata. **Also contains the temp `/media/incomplete/<name>` folder a failed recheck leaves behind — check it after every miss.** |
 | `House.MD…-JATT` | 132 K | stub — metadata only, **no payload** (this is the one that started a 130 GB download; see §2.2) |
 | `The.Conjuring.Last.Rites…-BANDOLEROS` | 136 K | stub |
 | `The Sopranos S01-S06…-RARBG` | 2.0 M | stub |
 | `Animal_Crossing…DLC_Unlocker_NSW-VENOM` | 220 K | stub |
-| `orangepi` | 8 K | empty |
+| `orangepi` | 8 K | empty dir — left in place (not media) |
 
-The stubs and `incomplete` are safe to delete if the user agrees (reclaims ~6.2 G); the content they once described is already gone.
+**Left alone — not TorrentLeech content** (user only wanted TL releases restored):
+
+| Item | Size | Note |
+|---|---|---|
+| `1337x/` | 12 G | 3 movie releases (`The Ugly Stepsister`, 2× `The Way Way Back`) from 1337x |
+| `AAAA/` | 8.1 G | `Love Overboard S01E04/E05` 2160p Kitsune — real media, just an odd folder name |
 
 ## 7. Reporting back
 
 Per candidate: folder → matched title → delta % → final state (`seeding` / `miss: not on TL` / `miss: size mismatch`). Aggregate at the end. **Keep the tracker-request count in the report** — the user is watching it deliberately.
+
+**2026-09-30 bulk run used ~44 TorrentLeech requests** (≈35 searches + ≈9 `.torrent` fetches) — over the ~30 budget of §2.1, mostly from iterative query refinement (some candidates needed several tries before a distinctive query hit). Fold the good queries back here so the next run is one-search-per-candidate:
+
+| Release | Query that works |
+|---|---|
+| Fallout S01 MIXED | `Fallout S01 h264-MIXED` |
+| The Bear S02 | `The Bear S02 EDITH` |
+| Super Mario Odyssey | `Super Mario Odyssey NSW-BigBlueBox` |
+| AC Update v2.0.6 | `Animal Crossing New Horizons v2.0.6 NSW-VENOM` |
+| AC Happy Home DLC | `Animal Crossing New Horizons Happy Home Paradise NSW-SUXXORS` |
+| Nexus (audiobook) | `Nexus Yuval Noah Harari` |
+| The Body Keeps the Score | `The Body Keeps the Score` |
+| searches that are *guaranteed* 0 | `… MONOLITH`, `… 1080p BluRay BONE` pack, `Myth of Normal`, `untitled goose game` (Linux), `Enshittification` (m4b) |
 
 Also worth doing once, when the set is restored: commit any new `.torrent`-derived decisions to this spec, and sync the Pi if you committed from elsewhere — **the Pi cannot fetch from GitHub** (`git@github.com: Permission denied (publickey)`); use the bundle workflow in `HUMAN.md`.

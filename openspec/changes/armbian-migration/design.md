@@ -276,7 +276,7 @@ The remaining suspect is the image: `lscr.io/linuxserver/qbittorrent:latest`, bu
 | **Docker compose files reference absolute paths** | The `.env` files reference `~/Documents/...` — make sure the restored `/home/orangepi/Documents/` directory structure is identical. |
 | **Gluetun WireGuard config lost** | `wg0.conf` is outside the repo (gitignored). It's in `~/Github/orangepi5/wg0.conf` — confirm it's backed up with `/home`. The PIA credentials and key generation script need checking. |
 | **PIA credentials expired / failing auth** | Confirmed pre-migration: `pia-wg-config` fails with authentication error, though the existing `wg0.conf` still works. If the config needs regeneration post-migration and credentials are dead, VPN breaks. **Must fix credentials as a post-migration task.** |
-| **Docker image bloat will accumulate again** | After cleanup (150 GB freed), the same pattern of old images/volumes will recur without periodic pruning. Need automated cleanup cron. |
+| **Docker image bloat will accumulate again** | After cleanup (150 GB freed), the same pattern of old images/volumes will recur without periodic pruning. Now mitigated: weekly `docker system prune -f` in root cron (task 9.2), deliberately **without** `--volumes` (bind-mount stack) — see `docker/README.md`. |
 | **New Armbian kernel breaks a Docker service** | Test each container after migration. Keep the Ubuntu NVMe untouched until all services are verified. |
 | **Ansible partial failure pattern repeats** | That's why we're replacing Ansible with a focused script for critical path. No cross-role dependencies, no external role downloads. |
 | **Downtime during migration** | Acceptable — the box can be offline for a few hours. The plan minimizes downtime to the flash + restore window (~1-2 hours for 143 GB data transfer). |
@@ -328,7 +328,7 @@ These items are outside the core migration flow but were required before the sys
 
 - ~~**PIA credentials**~~ — **done.** The old premise ("the existing `wg0.conf` still works") was false: its endpoint had been retired and the tunnel was handshaking with nobody. Regeneration now works via `docker/refresh-wireguard.sh` (decision 9).
 - ~~**Copyparty to docker-compose**~~ — **done.** It is a compose service in the restored repo (`docker/copyparty/`) and is started by `run.sh`.
-- **Docker auto-prune**: still to be installed (task 9.2 / 10.6). Note that `docker system prune --volumes -f` as originally written is more dangerous than it needs to be — the stack uses bind mounts, so unused *named* volumes are rare while the flag will happily delete volumes belonging to any stopped container.
+- ~~**Docker auto-prune**~~ — **done (task 9.2 / 10.6).** Weekly `docker system prune -f` in root cron (Sun 04:30), logging to `/var/log/docker-prune.log`. Installed plain, **not** `--volumes -f` as originally written: the stack uses bind mounts, so unused *named* volumes are rare while the flag will happily delete volumes belonging to any stopped container. First run reclaimed 164 MB of dangling layers plus the retired Jellyfin image (797 MB), taking reclaimable space from 1.885 GB to 66 MB.
 - **qBittorrent search tab**: broken in the current image; see decision 16 and task 10.4.
 
 ## Open Questions

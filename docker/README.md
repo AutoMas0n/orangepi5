@@ -1,9 +1,12 @@
 TODO C<roNtAB
 ```bash
 sudo crontab -l
-0 3 * * * cd ~/Github/orangepi5/docker && sudo ./run.sh
+0 3 * * * cd /home/orangepi/Github/orangepi5/docker && /home/orangepi/Github/orangepi5/docker/run.sh
 0 0 * * * /home/orangepi/Github/orangepi5/docker/docker_pull.sh
+30 4 * * 0 /usr/bin/docker system prune -f >> /var/log/docker-prune.log 2>&1
 ```
+
+Note the prune is plain `docker system prune -f`, deliberately **without** `--volumes`: the stack uses bind mounts, so the flag buys little and can delete volumes belonging to any stopped container. It removes dangling images, stopped containers, unused networks and build cache. Unused *tagged* images (e.g. a retired service's) must be deleted explicitly with `docker image rm`.
 
 ```bash
 sudo docker run --name hbbr -v ./data:/root -td --net=host rustdesk/rustdesk-server hbbr
