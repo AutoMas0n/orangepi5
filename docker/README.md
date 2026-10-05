@@ -29,4 +29,9 @@ ID Server: `192.168.2.155` Relay Server: `192.168.2.155` Key : ywCjf1fDg********
 sudo docker pull qmcgaw/gluetun
 sudo docker pull lscr.io/linuxserver/jackett
 sudo docker pull lscr.io/linuxserver/qbittorrent
-sudo docker pull lscr.io/linuxserver/jellyfin
+sudo docker pull stremio/server
+sudo docker pull ghcr.io/home-assistant/home-assistant:stable   # GHCR, not Docker Hub
+
+# Home Assistant (docker/homeassistant/) runs on host networking on port 8123 so it can
+# see the LAN. It is updated by the same nightly pull + 03:00 run.sh cycle as the rest.
+# The container install has no add-ons (that needs Home Assistant OS).

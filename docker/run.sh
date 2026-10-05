@@ -32,3 +32,4 @@ remove_docker_container gluetun
 restart_docker_compose "$DOCKER_DIR/qbittorrent" qbittorrent
 restart_docker_compose "$DOCKER_DIR/qbittorrent" jackett
 restart_docker_compose "$DOCKER_DIR/qbittorrent" stremio
+restart_docker_compose "$DOCKER_DIR/homeassistant" homeassistant

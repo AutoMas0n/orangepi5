@@ -6,6 +6,7 @@ images=(
   "lscr.io/linuxserver/jackett"
   "lscr.io/linuxserver/qbittorrent"
   "stremio/server"
+  "ghcr.io/home-assistant/home-assistant"
   # Add or remove images as needed
 )
 
