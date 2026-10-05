@@ -35,3 +35,15 @@ sudo docker pull ghcr.io/home-assistant/home-assistant:stable   # GHCR, not Dock
 # Home Assistant (docker/homeassistant/) runs on host networking on port 8123 so it can
 # see the LAN. It is updated by the same nightly pull + 03:00 run.sh cycle as the rest.
 # The container install has no add-ons (that needs Home Assistant OS).
+#
+#   http://192.168.2.113:8123   user: freeman   password: in `secrets` (HA_USER / HA_PASS)
+#
+# Locked out / forgot the owner password (https://www.home-assistant.io/docs/locked_out/):
+# the container CLI can reset any user's password without touching the config:
+#
+#   docker exec homeassistant hass --script auth --config /config list
+#   docker exec homeassistant hass --script auth --config /config change_password <user> <newpass>
+#   docker restart homeassistant        # required, or the running instance keeps the old hash
+#
+# The only unrecoverable case is losing the owner account entirely - that means a fresh
+# onboarding, i.e. losing the config. Which is why the password is in `secrets`.
