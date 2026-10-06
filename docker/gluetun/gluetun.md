@@ -22,29 +22,26 @@ source secrets
 docker-compose up -d
 ```
 
-## Install Prereqs and run Gluetun
-1. first
-```
-cd docker/gluetun
-```
-2. https://github.com/qdm12/gluetun-wiki/issues/35
+## WireGuard config: use docker/refresh-wireguard.sh
+
+The old procedure below used `pia-wg-config`. That tool POSTs to
+`privateinternetaccess.com/api/client/v2/addKey`, which now returns 404 - PIA moved
+key registration to the VPN server itself, behind a token:
+
+  1. `POST https://www.privateinternetaccess.com/api/client/v2/token` (form username/password)
+  2. region -> wg server from `https://serverlist.piaservers.net/vpninfo/servers/v6`
+  3. `GET https://<wg-hostname>:1337/addKey?pt=<token>&pubkey=<pubkey>` (TLS via ca.rsa.4096.crt)
+
+`docker/refresh-wireguard.sh` wraps PIA's maintained implementation
+(github.com/pia-foss/manual-connections) and installs the result as wg0.conf:
+
 ```bash
-source /etc/profile && export PATH=$PATH:$(go env GOPATH)/bin
-go install github.com/kylegrantlucas/pia-wg-config@latest
-source ../../secrets && pia-wg-config -o ../../wg0.conf -r "ca_toronto" $PIA_USER $PIA_PASS # needs a retry
-
-sudo docker-compose up -d #-d indicates background process
-sudo docker logs gluetun
-# OR
-sudo docker-compose up 
-
+sudo ./docker/refresh-wireguard.sh            # ca_toronto
+sudo ./docker/refresh-wireguard.sh ca_montreal # rotate region
 ```
 
-## TODO need to fix dir context - location
+gluetun runs as `VPN_SERVICE_PROVIDER=custom` + `VPN_TYPE=wireguard` with that file
+mounted read-only. If the tunnel stops handshaking, re-run the script - PIA retires
+server endpoints regularly.
 
-## Run gluetun container with entrypoint
-```bash
-sudo chmod 777 /home/orangepi/Github/orangepi5/wg0.conf
-sudo docker run --name gluetun2 --user root --entrypoint /bin/sh -it -v /home/orangepi/Github/orangepi5/wg0.conf:/gluetun/wireguard/wg0.conf qmcgaw/gluetun
-sudo docker rm gluetun2
-```
+## Old procedure (kept for reference, DO NOT USE - dead endpoint)

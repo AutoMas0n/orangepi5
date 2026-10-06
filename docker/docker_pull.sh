@@ -5,8 +5,9 @@ images=(
   "qmcgaw/gluetun"
   "lscr.io/linuxserver/jackett"
   "lscr.io/linuxserver/qbittorrent"
-  "lscr.io/linuxserver/jellyfin"
   "stremio/server"
+  "ghcr.io/home-assistant/home-assistant:stable"
+  # ghcr.io has no `latest` tag for HA - the rolling tag is `stable`.
   # Add or remove images as needed
 )
 

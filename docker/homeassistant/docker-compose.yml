@@ -1,0 +1,38 @@
+---
+# Home Assistant Container (permanent stack member).
+#
+# As of 2026-10-05 the current stable is 2026.9.4 and the official image is
+# ghcr.io - `homeassistant/home-assistant` on Docker Hub is the legacy registry.
+# Docs: https://www.home-assistant.io/installation/linux/
+#
+# Deliberately NOT behind gluetun: Home Assistant needs the LAN for discovery
+# (mDNS/SSDP) and direct access to local devices, so it uses host networking
+# exactly as the docs prescribe. That means no `ports:` - it listens on 8123
+# on the host itself.
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    network_mode: host
+    # The recorder database is sqlite; the 10s Docker default can SIGKILL it
+    # mid-write ("could not validate that the sqlite3 database ... was shutdown
+    # cleanly"). The docs' recommended fix is this 60s grace period. It is an
+    # upper bound, not a delay - Docker proceeds as soon as HA has exited.
+    stop_grace_period: 60s
+    environment:
+      # Home Assistant schedules on local wall-clock time, so this is NOT the
+      # Etc/UTC the VPN services use. Change it and automations shift with it.
+      - TZ=America/Toronto
+    volumes:
+      - /home/orangepi/docker-data/homeassistant:/config
+    # Intentionally no `privileged:` and no /run/dbus - there are no radios
+    # attached and network-only integrations do not need either. To add
+    # Bluetooth or a Zigbee/USB stick later, this is the whole change:
+    #   privileged: true
+    #   volumes:
+    #     - /run/dbus:/run/dbus:ro
+    #   devices:
+    #     - /dev/ttyACM0:/dev/ttyACM0
+    # then `docker compose up -d --force-recreate` (device options are applied
+    # at creation time, so a plain restart is not enough).

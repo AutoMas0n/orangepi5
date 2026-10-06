@@ -3,3 +3,5 @@ secrets
 settings.json
 manual-connections/
 wg0.conf
+.pi-web/
+wg0.backups/
