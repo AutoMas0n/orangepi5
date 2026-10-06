@@ -1,0 +1,395 @@
+{
+  "views": [
+    {
+      "title": "Camera",
+      "path": "main",
+      "icon": "mdi:cctv",
+      "type": "sidebar",
+      "cards": [
+        {
+          "type": "picture-elements",
+          "camera_image": "camera.icsee_camera_main_stream",
+          "camera_view": "live",
+          "aspect_ratio": "16:9",
+          "elements": [
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_left_up",
+              "icon": "mdi:arrow-top-left",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "58%",
+                "left": "7%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_left_up"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_up",
+              "icon": "mdi:arrow-up",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "58%",
+                "left": "15%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_up"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_right_up",
+              "icon": "mdi:arrow-top-right",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "58%",
+                "left": "23%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_right_up"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_left",
+              "icon": "mdi:arrow-left",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "72%",
+                "left": "7%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_left"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_stop",
+              "icon": "mdi:stop",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "72%",
+                "left": "15%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_stop"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_right",
+              "icon": "mdi:arrow-right",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "72%",
+                "left": "23%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_right"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_left_down",
+              "icon": "mdi:arrow-bottom-left",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "86%",
+                "left": "7%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_left_down"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_down",
+              "icon": "mdi:arrow-down",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "86%",
+                "left": "15%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_down"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_right_down",
+              "icon": "mdi:arrow-bottom-right",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "86%",
+                "left": "23%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_right_down"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_zoom_in",
+              "icon": "mdi:magnify-plus-outline",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "58%",
+                "left": "93%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_zoom_in"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_home_go_to",
+              "icon": "mdi:home",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "72%",
+                "left": "93%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_home_go_to"
+                }
+              }
+            },
+            {
+              "type": "state-icon",
+              "entity": "button.icsee_camera_ptz_zoom_out",
+              "icon": "mdi:magnify-minus-outline",
+              "state_color": false,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.45)",
+                "border-radius": "50%",
+                "padding": "7px",
+                "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                "--mdc-icon-size": "30px",
+                "cursor": "pointer",
+                "top": "86%",
+                "left": "93%",
+                "transform": "translate(-50%,-50%)"
+              },
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.icsee_camera_ptz_zoom_out"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Quick controls",
+          "entities": [
+            "select.icsee_camera_day_night_mode",
+            "switch.icsee_camera_white_light",
+            "switch.icsee_camera_motion_detection",
+            "switch.icsee_camera_human_detection",
+            "binary_sensor.icsee_camera_motion_alarm",
+            "number.icsee_camera_speaker_volume"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Status",
+      "path": "status",
+      "icon": "mdi:information-outline",
+      "cards": [
+        {
+          "type": "entities",
+          "title": "Camera",
+          "entities": [
+            "sensor.icsee_camera_wifi_signal",
+            "sensor.icsee_camera_users",
+            "sensor.icsee_camera_logged_in_as",
+            "sensor.icsee_camera_cloud_status",
+            "sensor.icsee_camera_video_standard",
+            {
+              "entity": "select.icsee_camera_main_stream_resolution",
+              "name": "Resolution"
+            },
+            {
+              "entity": "select.icsee_camera_main_stream_codec",
+              "name": "Codec"
+            },
+            {
+              "entity": "number.icsee_camera_main_stream_frame_rate",
+              "name": "Frame rate"
+            },
+            {
+              "entity": "select.icsee_camera_sub_stream_resolution",
+              "name": "Sub resolution"
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Storage",
+          "entities": [
+            {
+              "entity": "sensor.icsee_camera_sd_card_size",
+              "name": "SD size (MB)"
+            },
+            {
+              "entity": "sensor.icsee_camera_sd_card_free",
+              "name": "SD free (MB)"
+            },
+            "select.icsee_camera_sd_card_recording"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Security",
+          "entities": [
+            "binary_sensor.icsee_camera_telnet_debug_access",
+            "binary_sensor.icsee_camera_upnp_router_ports_open",
+            "switch.icsee_camera_onvif_password_required",
+            "switch.icsee_camera_cloud_access_p2p",
+            "switch.icsee_camera_cloud_block_all_servers",
+            "switch.icsee_camera_rtsp_server",
+            "switch.icsee_camera_status_led",
+            "switch.icsee_camera_voice_prompts"
+          ]
+        }
+      ]
+    }
+  ]
+}

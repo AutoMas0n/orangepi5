@@ -47,3 +47,6 @@ sudo docker pull ghcr.io/home-assistant/home-assistant:stable   # GHCR, not Dock
 #
 # The only unrecoverable case is losing the owner account entirely - that means a fresh
 # onboarding, i.e. losing the config. Which is why the password is in `secrets`.
+#
+# Camera / dashboard setup (iCSee integration + RTSP patch + Lovelace re-apply):
+#   docker/homeassistant/README.md
