@@ -31,6 +31,27 @@ The camera (XiongMai / iCSee) formats the card with its own **WFS0.4** filesyste
 There is **no partition table** and Linux cannot mount it (`mmcblk0: Can't lookup
 blockdev`). The only way to read it is filesystem-aware tooling.
 
+## Adding / replacing the SD card
+
+A new card is exFAT/FAT32 and the camera expects WFS, so it must be initialized
+**by the camera** — there is nothing to do on the PC:
+
+1. Power the camera, insert the card, wait ~30 s.
+2. iCSee app → device → **Settings → Storage / SD Card** (sometimes *Record → Disk*).
+   - Shows capacity + **Normal** → done (firmware auto-formatted it).
+   - Shows **Unformatted / Abnormal / 0 GB** → tap **Format**.
+
+Notes:
+- Use a **high-endurance** card (SanDisk Max Endurance, Samsung PRO Endurance);
+  24/7 recording kills normal cards fast. Capacity is firmware-limited — 128 GB
+  works on this camera; test before trusting 256 GB.
+- Pre-formatting on the PC is pointless — the camera re-formats to WFS regardless.
+- Formatting **wipes the card** (protocol op `OPStorageManagerClear`).
+- Not detected? Reseat; some units only pick up a card inserted while powered off
+  then booted.
+- Output is identical to the existing card (same `Vid-*.h264` clips, WFS), so the
+  extraction runbook above is unchanged.
+
 ## One-time setup
 
 ```bash
