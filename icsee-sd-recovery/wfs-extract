@@ -1,0 +1,113 @@
+#!/bin/bash
+# Extract WFS recordings from the iCSee/XiongMai camera SD card and remux to MP4.
+#
+# Usage: wfs-extract <date-prefix> [outdir]
+#   <date-prefix>  e.g. 202610 extracts all 2026-10-xx clips; 20261006 one day;
+#                  2024 extracts all of 2024; "all" extracts everything.
+#   [outdir]       default ~/wfs-recovered
+#
+# The camera writes a mix of H.264 and H.265/HEVC elementary streams (all named
+# *.h264) plus small non-video metadata records, which are skipped.
+#
+# Requires read access to /dev/mmcblk0 (e.g. sudo setfacl -m u:$USER:r /dev/mmcblk0).
+
+set -uo pipefail
+
+DEV=${WFS_DEV:-/dev/mmcblk0}
+TMP_BODY=${WFS_BODY:-/tmp/wfs_body.txt}
+PREFIX=${1:?usage: wfs-extract <date-prefix|all> [outdir]}
+OUT=${2:-$HOME/wfs-recovered}
+TOOLS="$HOME/wfs-tools/wfs"
+
+mkdir -p "$OUT"
+
+if [ ! -s "$TMP_BODY" ]; then
+    echo "Reading filesystem index from $DEV ..."
+    "$TOOLS" fls -r -m / "$DEV" > "$TMP_BODY"
+fi
+
+PICK=/tmp/wfs_pick.$$
+python3 - "$TMP_BODY" "$PREFIX" > "$PICK" <<'PY'
+import sys, re
+body, pre = sys.argv[1], sys.argv[2]
+pat = re.compile(r'/Vid-(\d{8})-\d{6}-\d{6}\.\d+\.h264$')
+for line in open(body, errors='replace'):
+    p = line.rstrip('\n').split('|')
+    if len(p) < 11:
+        continue
+    m = pat.search(p[1])
+    if not m:
+        continue
+    if pre == 'all' or m.group(1).startswith(pre):
+        print(f"{p[2]}\t{p[1]}\t{p[6]}")
+PY
+
+N=$(wc -l < "$PICK")
+if [ "$N" -eq 0 ]; then
+    echo "No recordings matched '$PREFIX'." >&2
+    rm -f "$PICK"
+    exit 1
+fi
+echo "Matched $N recordings. Extracting to $OUT ..."
+
+detect_codec() {
+    python3 -c "
+import sys
+d = open(sys.argv[1], 'rb').read(65536)
+hevc = (b'\x00\x00\x00\x01\x40\x01', b'\x00\x00\x00\x01\x42\x01', b'\x00\x00\x01\x40\x01', b'\x00\x00\x01\x42\x01')
+h264 = (b'\x00\x00\x00\x01\x67', b'\x00\x00\x01\x67', b'\x00\x00\x00\x01\x27', b'\x00\x00\x01\x27', b'\x00\x00\x00\x01\x47', b'\x00\x00\x01\x47')
+if any(p in d for p in h264):
+    print('h264')
+elif any(p in d for p in hevc):
+    print('hevc')
+else:
+    print('none')
+" "$1"
+}
+
+remux() {  # $1=codec $2=input $3=output
+    ffmpeg -hide_banner -loglevel error -f "$1" -fflags +genpts -r 24 -i "$2" \
+        -c copy -movflags +faststart "$3" -y 2>/dev/null
+}
+
+i=0; fail=0; skipped=0
+while IFS=$'\t' read -r inode path size; do
+    i=$((i+1))
+    base=$(basename "$path")
+    mp4="${base%.h264}.mp4"
+    dest="$OUT/$mp4"
+    if [ -s "$dest" ]; then
+        echo "[$i/$N] skip (exists) $mp4"
+        continue
+    fi
+    echo "[$i/$N] $mp4"
+    tmp=$(mktemp /tmp/wfs_XXXXXX.h264)
+
+    ok=0
+    for attempt in 1 2 3 4 5; do
+        if "$TOOLS" icat "$DEV" "$inode" > "$tmp" 2>/dev/null && [ -s "$tmp" ]; then ok=1; break; fi
+        sleep 1
+    done
+    if [ "$ok" -ne 1 ]; then
+        echo "[$i/$N] READ FAILED $mp4" | tee -a "$OUT/failed.log"
+        fail=$((fail+1)); rm -f "$tmp"; continue
+    fi
+
+    codec=$(detect_codec "$tmp")
+    if [ "$codec" = none ]; then
+        echo "[$i/$N] non-video, skipped $mp4"
+        skipped=$((skipped+1)); rm -f "$tmp"; continue
+    fi
+
+    if ! remux "$codec" "$tmp" "$dest"; then
+        other=$([ "$codec" = hevc ] && echo h264 || echo hevc)
+        if ! remux "$other" "$tmp" "$dest"; then
+            echo "[$i/$N] REMUX FAILED ($codec/$other) $mp4" | tee -a "$OUT/failed.log"
+            fail=$((fail+1)); rm -f "$tmp" "$dest"; continue
+        fi
+    fi
+    rm -f "$tmp"
+done < "$PICK"
+rm -f "$PICK"
+
+echo "Done. $((N-fail-skipped)) video extracted, $skipped non-video skipped, $fail failed. Output in $OUT"

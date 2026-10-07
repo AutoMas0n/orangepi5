@@ -1,0 +1,28 @@
+#!/bin/bash
+# Play a WFS recording straight off the camera card, without copying it to disk.
+#
+# Usage: wfs-play <inode>
+#   Find an inode in ~/wfs-recovered/index.csv (column 5), e.g.
+#     grep 20261006-1630 ~/wfs-recovered/index.csv
+#   then:  ~/wfs-tools/wfs-play 25467
+#
+# Requires read access to /dev/mmcblk0.
+
+set -uo pipefail
+DEV=${WFS_DEV:-/dev/mmcblk0}
+INODE=${1:?usage: wfs-play <inode>}
+TOOLS="$HOME/wfs-tools/wfs"
+
+tmp=$(mktemp /tmp/wfs_play_XXXXXX.h264)
+trap 'rm -f "$tmp"' EXIT
+"$TOOLS" icat "$DEV" "$INODE" > "$tmp" || { echo "read failed" >&2; exit 1; }
+
+codec=$(python3 -c "
+import sys
+d = open(sys.argv[1], 'rb').read(65536)
+h264 = (b'\x00\x00\x00\x01\x67', b'\x00\x00\x01\x67', b'\x00\x00\x00\x01\x27', b'\x00\x00\x01\x27')
+hevc = (b'\x00\x00\x00\x01\x40\x01', b'\x00\x00\x00\x01\x42\x01')
+print('h264' if any(p in d for p in h264) else ('hevc' if any(p in d for p in hevc) else 'h264'))
+" "$tmp")
+
+exec ffplay -autoexit -window_title "WFS inode $INODE ($codec)" -f "$codec" "$tmp"

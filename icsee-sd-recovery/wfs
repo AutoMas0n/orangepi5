@@ -1,0 +1,4 @@
+#!/bin/bash
+# WFS (iCSee/XiongMai camera) filesystem tools wrapper
+export LD_LIBRARY_PATH="$HOME/wfs-tools/lib:$LD_LIBRARY_PATH"
+exec "$HOME/wfs-tools/bin/$(basename "$1")" "${@:2}"
