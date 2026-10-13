@@ -151,12 +151,12 @@ Run each check against the Baseline in `design.md`.
 
 ## 8. Finalization (after 48-hour burn-in passes)
 
-- [ ] 8.1 On the new Armbian system, ensure the migration branch is up to date: `cd ~/Github/orangepi5 && git pull origin migration/armbian`
-- [ ] 8.2 Push any post-migration fixes or config updates back to the branch
-- [ ] 8.3 Merge migration/armbian into main and push: `git checkout main && git merge migration/armbian && git push origin main`
-- [ ] 8.4 Delete the remote branch: `git push origin --delete migration/armbian`
-- [ ] 8.5 Delete the local branch: `git branch -d migration/armbian`
-- [ ] 8.6 Run `openspec archive change armbian-migration` to archive the completed change
+- [x] 8.1 **The bundle workaround is obsolete — the Pi can now reach GitHub.** `git ls-remote origin main` on the Pi returns `5eaea01`, so the "Pi cannot fetch from GitHub, sync via `git bundle`" constraint recorded in earlier tasks (and in HUMAN.md) no longer holds. Network/auth reachability is proven; *push* access from the Pi has not been exercised. The Pi's checkout is on `main` and was fast-forwarded to the final state.
+- [x] 8.2 Post-migration work is committed and pushed — Home Assistant as a permanent 5th service (`docker/homeassistant/`, with its credential home recorded in `docker/README.md`), the working iCSee camera dashboard + integration (`docker/homeassistant/apply-dashboard.sh`, `lovelace.icsee_camera.json`, the libavformat PTZ/RTSPS patch), and the SD-card recovery tooling (`icsee-sd-recovery/`).
+- [x] 8.3 Merged into `main` and pushed. Twice, in fact: the bulk of the branch via **PR #1** (`1344e50`), then the post-burn-in work (HA credential home + the 7.13 verdict) as `51cda34`. `git merge-base --is-ancestor` confirms the branch tip is an ancestor of `main` — nothing was left behind.
+- [x] 8.4 Remote branch deleted — confirmed by `git fetch --prune` reporting `[deleted] (none) -> origin/migration/armbian`.
+- [x] 8.5 Local branch deleted (`was d69ab01`).
+- [x] 8.6 Archived — the change moved to [`openspec/changes/archive/2026-10-13-armbian-migration/`](../archive/2026-10-13-armbian-migration) on 2026-10-13. Archived with **2 tasks deliberately left open**: 9.3 (convenience extras, "as needed") and 9.5 (old backup drives) — both deferred/optional by design, neither is a migration prerequisite.
 
 ## 9. Post-Migration Cleanup (deferred / optional)
 
