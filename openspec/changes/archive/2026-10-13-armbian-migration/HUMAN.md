@@ -175,11 +175,13 @@ If everything is still working:
 
 1. **WireGuard headroom (optional).** 602 Mbps tunneled vs 801 Mbps raw, with one core at 85% — the lever is spreading RX across cores (RPS / multi-queue), deliberately not applied before the burn-in. See decision 14.
 2. ~~**Docker auto-prune (task 9.2 / 10.6).**~~ **Done** — weekly root cron, `docker system prune -f` **without** `--volumes` (the stack uses bind mounts, so the flag buys little and can delete volumes of any stopped container). First run reclaimed 164 MB of dangling layers plus the retired Jellyfin image (797 MB).
-3. **48-hour burn-in (task 7.13)** — then run section 8 of `tasks.md` in full: merge `migration/armbian` into `main`, push, delete the branch, and `openspec archive change armbian-migration`.
+3. ~~**48-hour burn-in (task 7.13)**, then section 8 of `tasks.md`.~~ **Done 2026-10-06 / 2026-10-13.** The burn-in passed (`PASS`, 13 snapshots over 50.7 h, 0 FAIL lines, 0 restarts on all 60 container checks, egress `45.89.249.204` throughout) and section 8 is complete: `migration/armbian` merged into `main` and pushed, remote and local branches deleted, change archived to `openspec/changes/archive/2026-10-13-armbian-migration/`.
+
+   **The rollback window can now be closed** — the old Ubuntu NVMe is no longer the safety net. Nothing is left holding it open on the software side.
 
 ### Things worth knowing
 
-* **The Pi cannot reach GitHub.** Its remote is SSH (`git@github.com:…`) and the key at `~/.ssh/id_ed25519` is **not authorized**, so `git fetch`/`pull` fail with `Permission denied (publickey)`. Work from a checkout that *can* push (the Termux copy at `/data/data/com.termux/files/home/github/orangepi5` pushes fine), then bring the Pi forward with a bundle:
+* ~~**The Pi cannot reach GitHub.**~~ **Corrected 2026-10-13: it can.** The remote was switched from SSH to HTTPS (`https://github.com/AutoMas0n/orangepi5.git`), and `git ls-remote origin main` plus a real `git pull --ff-only origin main` both succeed on the Pi. The whole `git bundle` ritual below is therefore **obsolete** — just `git pull` on the Pi. Historical note: the problem was the SSH remote with an unauthorized `~/.ssh/id_ed25519`, which fails as `Permission denied (publickey)`. **Push** access from the Pi is still unexercised (fetch works; nobody has tried to write), so keep pushing from the Termux copy. Kept for the record:
 
   ```bash
   # on the pushing checkout
