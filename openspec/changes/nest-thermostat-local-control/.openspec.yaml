@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-11-07
+# Parked exploration: no spec-level behavior is committed yet. Specs (deltas for
+# the "climate-control" capability) get written when a path is chosen and the
+# two blocking questions in design.md are answered.
+skip_specs: true
