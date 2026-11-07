@@ -47,7 +47,23 @@ silently regressing.
 The "Camera" dashboard (`/icsee-camera`) is a storage-mode Lovelace dashboard:
 the live main-stream feed (`picture-elements` + `camera_view: live`) with 12
 state-icon PTZ/zoom controls overlaid, plus a "Quick controls" card and a
-separate "Status" view (camera/network/storage/security entities).
+separate "Status" view (camera/network/storage/security/image entities). Both
+the "Quick controls" card and the Status view's "Image" card expose **Image
+flip** and **Image mirror** for when the camera is physically re-oriented (e.g.
+a lightbulb camera mounted upside down).
+
+A **PTZ controls** button above the feed toggles the 12 overlay PTZ/zoom
+buttons on and off; the live feed stays visible either way. The toggle is
+backed by the `input_boolean.icsee_ptz_controls_visible` helper in Home
+Assistant's `configuration.yaml`:
+
+```yaml
+input_boolean:
+  icsee_ptz_controls_visible:
+    name: PTZ controls visible
+    icon: mdi:eye
+    initial: true
+```
 
 Lovelace config is service state (`.storage/lovelace.icsee_camera`) and is
 deliberately not in git. `lovelace.icsee_camera.json` in this directory *is* the
