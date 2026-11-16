@@ -272,9 +272,35 @@ toggle needs `input_boolean.tapo_ptz_controls_visible` in
 `configuration.yaml` - add it before the dashboard, or the toggle card is dead.
 
 PTZ overlay differs from iCSee's on purpose: 5 buttons (up/down/left/right +
-calibrate), because the C200 has no optical zoom and no diagonal move. There is
-no `stop` because the buttons use `moveMotor(x, y)` - a finite relative move -
-so a press ends by itself. Never wire them to `moveMotorStep`.
+centre), and no diagonal move. There is no `stop` because the buttons use
+`moveMotor(x, y)` - a finite relative move - so a press ends by itself. Never
+wire them to `moveMotorStep`.
+
+The centre button is **zoom 1x -> 2x -> 3x -> 1x**, and it is digital because
+the hardware has none: `getZoomConfig`, `setDigitalZoom`, `getPtzZoom`,
+`getLensZoomConfig` are all `-40210` and `basic_info` has no zoom field. Don't
+waste time looking for a camera-side zoom API on this model.
+
+Implementation: `input_select.tapo_camera_zoom` (options `1x|2x|3x`) plus a
+`state-icon` whose `tap_action` is `perform-action input_select.select_next` -
+`select_next` wraps, so no script is needed. `card-mod` scales the live image:
+
+```yaml
+card_mod:
+  style: |
+    hui-image { transform: scale(<1|2|3>); transform-origin: center center;
+                transition: transform 220ms ease-in-out; }
+    :host { overflow: hidden; }
+```
+
+`hui-image` is a genuine child of the picture-elements card, so buttons do not
+scale with the picture. card-mod is one local file in `www/` + a line in
+`frontend.extra_module_url` - no HACS needed, which matters because this HA has
+none. `tools/patch-config.py` and `tools/restyle-ptz.py` make both edits
+idempotently.
+
+Calibrate was on the old centre button; it moved to the controls row so it stays
+reachable.
 
 Two layout rules learned from the user's phone:
 
@@ -285,6 +311,15 @@ centred at 50%/62% of the frame.
 - **Don't use a `button` card for the overlay toggle.** It renders as a huge
 tile on mobile ("the button with the eye is huge"). Use a compact `entities`
 row with `tap_action: toggle`.
+- **Keep the overlay translucent, not invisible** (`rgba(0,0,0,0.18)` bg,
+  `rgba(255,255,255,0.22)` border). Fully transparent buttons disappear over a
+  bright frame; fully opaque ones hide the picture.
+
+When verifying from the server side, remember `configuration.yaml` is at
+`/config/configuration.yaml` *inside* the container, not the host path. And
+`configuration.yaml` contains `!include`, so a plain `yaml.safe_load` fails -
+subclass `SafeLoader` and `add_multi_constructor("!", ...)` before validating,
+otherwise any "is this YAML valid" gate rejects a perfectly good file.
 
 ## 8. Verify in Home Assistant
 

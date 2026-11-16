@@ -42,6 +42,47 @@ areas instead of percentage positions: on a ~350 px phone card a 7% gap is only
 ~25 px, which made the buttons collide. The controls toggle is a compact
 `entities` row, not a `button` card - that renders as a huge tile on mobile.
 
+Buttons are translucent (`rgba(0,0,0,0.18)`) so the live picture stays readable
+under them. The centre button cycles **zoom 1x -> 2x -> 3x -> 1x**.
+
+### Zoom is digital, because the hardware has none
+
+This camera has a **fixed lens**. `getZoomConfig`, `getDigitalZoom`,
+`setDigitalZoom`, `getPtzZoom`, `getLensZoomConfig` and `zoom` all answer
+`-40210 METHOD_DO_NOT_EXIST`, and `basic_info` contains no zoom field. There is
+no camera-side zoom to call, so the zoom is done in the browser:
+
+* `input_select.tapo_camera_zoom` holds `1x | 2x | 3x`. The centre button is a
+  `state-icon` bound to it with `tap_action: perform-action
+  input_select.select_next` - `select_next` wraps `1x -> 2x -> 3x -> 1x` on its
+  own, so no script or automation is needed.
+* `card-mod` scales the live `<hui-image>` to match, with a 220 ms transition:
+
+```yaml
+card_mod:
+  style: |
+    hui-image {
+      transform: scale({% set z = states('input_select.tapo_camera_zoom') %}
+        {% if z == '3x' %}3{% elif z == '2x' %}2{% else %}1{% endif %});
+      transform-origin: center center;
+      transition: transform 220ms ease-in-out;
+    }
+    :host { overflow: hidden; }
+```
+
+`hui-image` is a real child of the picture-elements card (confirmed in the
+bundled frontend), so the transform hits only the image - the buttons stay put.
+`overflow: hidden` keeps the scaled stream inside the card instead of bleeding
+over the dashboard.
+
+card-mod is a **single local file**, no HACS: download `card-mod.js`, drop it in
+`www/`, and add `/local/card-mod.js` to `frontend.extra_module_url`. Both
+`tools/patch-config.py` and `tools/restyle-ptz.py` in this directory do those
+edits idempotently - re-running either is safe.
+
+Calibrate (`button.tapo_camera_calibrate_motor`) moved off the centre button and
+into the controls row, so it is still reachable.
+
 ## Install
 
 The integration is service state in the HA config, but the source lives here:

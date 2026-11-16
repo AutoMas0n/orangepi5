@@ -29,8 +29,8 @@
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.55)",
-                  "border": "1px solid rgba(255,255,255,0.35)",
+                  "background": "rgba(0,0,0,0.18)",
+                  "border": "1px solid rgba(255,255,255,0.22)",
                   "border-radius": "50%",
                   "width": "44px",
                   "height": "44px",
@@ -60,8 +60,8 @@
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.55)",
-                  "border": "1px solid rgba(255,255,255,0.35)",
+                  "background": "rgba(0,0,0,0.18)",
+                  "border": "1px solid rgba(255,255,255,0.22)",
                   "border-radius": "50%",
                   "width": "44px",
                   "height": "44px",
@@ -85,14 +85,14 @@
               },
               {
                 "type": "state-icon",
-                "entity": "button.tapo_camera_calibrate_motor",
-                "icon": "mdi:crosshairs-gps",
-                "title": "Calibrate",
+                "entity": "input_select.tapo_camera_zoom",
+                "icon": "mdi:magnify-plus-outline",
+                "title": "Zoom (1x \u2192 2x \u2192 3x)",
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.55)",
-                  "border": "1px solid rgba(255,255,255,0.35)",
+                  "background": "rgba(0,0,0,0.18)",
+                  "border": "1px solid rgba(255,255,255,0.22)",
                   "border-radius": "50%",
                   "width": "44px",
                   "height": "44px",
@@ -100,7 +100,7 @@
                   "align-items": "center",
                   "justify-content": "center",
                   "filter": "drop-shadow(0 0 4px rgba(0,0,0,0.9))",
-                  "--mdc-icon-size": "24px",
+                  "--mdc-icon-size": "22px",
                   "cursor": "pointer",
                   "left": "50%",
                   "top": "62%",
@@ -108,9 +108,9 @@
                 },
                 "tap_action": {
                   "action": "perform-action",
-                  "perform_action": "button.press",
+                  "perform_action": "input_select.select_next",
                   "target": {
-                    "entity_id": "button.tapo_camera_calibrate_motor"
+                    "entity_id": "input_select.tapo_camera_zoom"
                   }
                 }
               },
@@ -122,8 +122,8 @@
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.55)",
-                  "border": "1px solid rgba(255,255,255,0.35)",
+                  "background": "rgba(0,0,0,0.18)",
+                  "border": "1px solid rgba(255,255,255,0.22)",
                   "border-radius": "50%",
                   "width": "44px",
                   "height": "44px",
@@ -153,8 +153,8 @@
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.55)",
-                  "border": "1px solid rgba(255,255,255,0.35)",
+                  "background": "rgba(0,0,0,0.18)",
+                  "border": "1px solid rgba(255,255,255,0.22)",
                   "border-radius": "50%",
                   "width": "44px",
                   "height": "44px",
@@ -176,7 +176,10 @@
                   }
                 }
               }
-            ]
+            ],
+            "card_mod": {
+              "style": "\nhui-image {\n  transform: scale({% set z = states('input_select.tapo_camera_zoom') %}{% if z == '3x' %}3{% elif z == '2x' %}2{% else %}1{% endif %});\n  transform-origin: center center;\n  transition: transform 220ms ease-in-out;\n}\n:host { overflow: hidden; }\n"
+            }
           }
         },
         {
@@ -193,7 +196,10 @@
             "camera_image": "camera.tapo_camera_main_stream",
             "camera_view": "live",
             "aspect_ratio": "16:9",
-            "elements": []
+            "elements": [],
+            "card_mod": {
+              "style": "\nhui-image {\n  transform: scale({% set z = states('input_select.tapo_camera_zoom') %}{% if z == '3x' %}3{% elif z == '2x' %}2{% else %}1{% endif %});\n  transform-origin: center center;\n  transition: transform 220ms ease-in-out;\n}\n:host { overflow: hidden; }\n"
+            }
           }
         },
         {
@@ -206,6 +212,16 @@
               "tap_action": {
                 "action": "toggle"
               }
+            },
+            {
+              "entity": "button.tapo_camera_calibrate_motor",
+              "name": "Calibrate motor",
+              "icon": "mdi:crosshairs-gps"
+            },
+            {
+              "entity": "input_select.tapo_camera_zoom",
+              "name": "Zoom",
+              "icon": "mdi:magnify"
             }
           ]
         },
