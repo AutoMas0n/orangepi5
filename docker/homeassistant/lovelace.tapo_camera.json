@@ -221,16 +221,8 @@
         },
         {
           "type": "entities",
-          "title": "Position",
+          "title": "Motion",
           "entities": [
-            {
-              "entity": "sensor.tapo_camera_pan_angle",
-              "name": "Pan"
-            },
-            {
-              "entity": "sensor.tapo_camera_tilt_angle",
-              "name": "Tilt"
-            },
             {
               "entity": "binary_sensor.tapo_camera_motion_detection_active",
               "name": "Motion setting"
@@ -248,8 +240,8 @@
           "type": "entities",
           "title": "Camera",
           "entities": [
-            "sensor.tapo_camera_pan_angle",
-            "sensor.tapo_camera_tilt_angle",
+            "camera.tapo_camera_main_stream",
+            "camera.tapo_camera_sub_stream",
             "sensor.tapo_camera_sd_card_used"
           ]
         },

@@ -48,6 +48,8 @@ class TapoC200Device:
         self.rtsp_password = rtsp_password if rtsp_password is not None else password
         self._lock = asyncio.Lock()
         self._tapo: Tapo | None = None
+        # Set by async_setup_entry after probing; see async_motor_status.
+        self.position_readable: bool = False
 
     # ── plumbing ──────────────────────────────────────────────────────────
 
@@ -116,11 +118,10 @@ class TapoC200Device:
         # ~170 ms extra on a 60 s poll. Worth it: pan/tilt position is the one
         # value that changes without us writing it (preset jumps, the phone
         # app, the camera's own patrol), so it has to come from the poll.
-        try:
+        # Skipped entirely when firmware 1.4.6+ removed the read - there is
+        # nothing to poll and an entity never consumes the value.
+        if self.position_readable:
             state["motor"] = await self.async_motor_status()
-        except TapoError as err:
-            _LOGGER.debug("%s: motor status unavailable: %s", self.host, err)
-            state["motor"] = {}
         return state
 
     async def async_read_info(self) -> dict[str, Any]:
@@ -161,12 +162,18 @@ class TapoC200Device:
         return raw if isinstance(raw, dict) else {}
 
     async def async_motor_status(self) -> dict[str, Any]:
-        """Pan/tilt position. Uses the `ptz` namespace, not `motor`.
+        """Pan/tilt position, or an empty dict if the camera will not say.
 
-        On C200 5.0 firmware the capability/status reads live under `ptz` while
-        the movement *commands* live under `motor`. pytapo's getMotorCapability
-        asks for `motor.capability` and fails with -40101 on this camera; this
-        raw request is the one that works.
+        Firmware 1.2.x: the read lives in the anonymous `ptz` namespace (the
+        movement *commands* live in `motor`), so this raw request is used
+        instead of pytapo's `getMotorCapability`, which asks for
+        `motor.capability` and fails with -40101.
+
+        Firmware 1.4.6 (Build 260709) REMOVED the read: the namespace request
+        now answers -40210 METHOD_DO_NOT_EXIST, and its replacement
+        `getPtzStatus` always returns an empty result (verified across every
+        section/name/index shape tried). That is reported as "no position"
+        rather than an error, because nothing is broken - the field is gone.
         """
         async with self._lock:
             tapo = await self._async_tapo()
@@ -178,11 +185,18 @@ class TapoC200Device:
                     ),
                 )
             except Exception as err:  # noqa: BLE001
+                if "-40210" in str(err):
+                    return {}
                 raise TapoError(str(err)) from err
         return (result or {}).get("ptz", {}).get("status", {})
 
     async def async_motor_capability(self) -> dict[str, Any]:
-        """PTZ capability flags (preset_supported, tour_supported, ...)."""
+        """PTZ capability flags (preset_supported, tour_supported, ...).
+
+        Empty on firmware 1.4.6+, which removed this read too. Callers treat an
+        empty dict as "unknown, assume supported" - presets and nudges still
+        work there, and guessing "unsupported" would hide working buttons.
+        """
         async with self._lock:
             tapo = await self._async_tapo()
             try:
@@ -193,6 +207,8 @@ class TapoC200Device:
                     ),
                 )
             except Exception as err:  # noqa: BLE001
+                if "-40210" in str(err):
+                    return {}
                 raise TapoError(str(err)) from err
         return (result or {}).get("ptz", {}).get("capability", {})
 

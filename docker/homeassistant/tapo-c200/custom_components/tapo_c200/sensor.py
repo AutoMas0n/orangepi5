@@ -23,10 +23,15 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     coordinator: TapoC200Coordinator = entry.runtime_data
-    entities: list[SensorEntity] = [
-        TapoAngleSensor(coordinator, "pan", "mdi:rotate-right"),
-        TapoAngleSensor(coordinator, "tilt", "mdi:angle-acute"),
-    ]
+    entities: list[SensorEntity] = []
+    # Only offer a position sensor if the camera will report one. Firmware 1.4.6
+    # dropped the read entirely, and an always-`unknown` sensor is worse than
+    # no sensor at all - it looks broken rather than unsupported.
+    if coordinator.position_readable:
+        entities += [
+            TapoAngleSensor(coordinator, "pan", "mdi:rotate-right"),
+            TapoAngleSensor(coordinator, "tilt", "mdi:angle-acute"),
+        ]
     if coordinator.info.get("sd"):
         entities.append(TapoStorageSensor(coordinator))
     async_add_entities(entities)
@@ -35,13 +40,19 @@ async def async_setup_entry(
 class TapoAngleSensor(TapoC200Entity, SensorEntity):
     """Pan or tilt angle, in degrees.
 
-    Read from `ptz.status` (angle_x / angle_y) in the coordinator poll. This is
-    a CoordinatorEntity, so `async_update` is never called - values have to
-    come from `coordinator.data`.
+    Read from the `ptz.status` read (angle_x / angle_y) in the coordinator poll.
+    This is a CoordinatorEntity, so `async_update` is never called - values
+    have to come from `coordinator.data`.
 
     `angle_x` wraps at 360 while `angle_y` is signed, which is how the camera
     reports them - the values are passed through unchanged rather than
     normalised, so automations can compare against what pytapo returns.
+
+    BEWARE: firmware 1.4.6 (Build 260709) REMOVED that read. `getPtzStatus`
+    still exists but answers an empty result, so this sensor is permanently
+    `unknown` there. It is registered only when the position is readable, which
+    `async_setup_entry` decides by probing once - see `TapoC200Device
+    .async_motor_status`. A sensor that never reports is worse than no sensor.
     """
 
     _attr_native_unit_of_measurement = "°"

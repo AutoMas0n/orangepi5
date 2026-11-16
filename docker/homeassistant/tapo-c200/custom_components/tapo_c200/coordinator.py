@@ -46,6 +46,10 @@ class TapoC200Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Filled in async_setup_entry before the first refresh.
         self.info: dict[str, Any] = {}
         self.capability: dict[str, Any] = {}
+        # Whether the camera will report a pan/tilt angle at all. False on
+        # firmware 1.4.6+, where the read was removed - the sensors are then
+        # not created instead of sitting at `unknown` forever.
+        self.position_readable: bool = False
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:

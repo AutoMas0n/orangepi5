@@ -126,9 +126,43 @@ On the Orange Pi, `docker` works without sudo (the user is in the `docker`
 group); `sudo` over ssh needs the password piped with `sudo -S -p ""`, and
 credentials come from `octx creds get common`. Never commit a password.
 
+## 5b. Turn OFF auto-upgrade first, before anything else
+
+A provisioned camera silently upgrades itself at ~03:00 and **that can remove
+API calls you depend on**. It happened here: 1.2.1 → 1.4.6 removed every PTZ
+*read*, killing the pan/tilt sensors overnight while the buttons kept working.
+
+```python
+cam.setFirmwareAutoUpgradeConfig(enabled=False, time="03:00")  # -> {}
+```
+
+Pass a `time` even when disabling: `enabled=False` alone is rejected with a
+misleading `-40209` "Invalid login credentials". Verify with
+`getFirmwareAutoUpgradeConfig()` → `common.enabled: "off"`.
+
+How to recognise this class of breakage: entities go `unavailable`, then
+`unknown` after a reload, while pytapo's own high-level reads still succeed and
+`basic_info.sw_version` is newer than what you documented. Always check
+`sw_version` before debugging code.
+
+Firmware 1.4.6 specifics worth knowing:
+
+- Anonymous namespace reads (`{"method":"get","ptz":{...}}`) → `-40210`. It
+  became named camelCase methods (`getDeviceInfo`, `getOsd`, `getSdCardStatus`,
+  `getClockStatus`, ...). pytapo's high-level calls still work.
+- `getPtzStatus` exists but **always returns an empty result** - no section,
+  name, or index shape works. There is no angle read on this firmware, and
+  ONVIF `GetStatus` also returns an empty `PTZStatus`. Don't hunt further; ship
+  without position sensors.
+- `moveMotor(x, y)` still moves. Only reads were removed.
+- If you pre-create a sensor and later the firmware removes its source, **delete
+  the stale entity-registry rows** (`config/entity_registry/remove` over the HA
+  websocket), or the dead entity lingers as `unavailable` forever.
+
 ## 6. PTZ: the part not in pytapo's docs
 
-Namespace split on this firmware - **reads under `ptz`, movement under `motor`**:
+Namespace split on firmware 1.2.x - **reads under `ptz`, movement under
+`motor`**:
 
 - `Tapo.getMotorCapability()` fails (`motor.capability` -> `-40101`). Use the raw
   request `{"method":"get","ptz":{"name":["capability"]}}`.
@@ -215,12 +249,20 @@ The OSD timestamp changing between two snapshots is the fastest proof the frame
 is live. If the image says "Privacy Mode is on", a previous test left it on -
 turn `switch.tapo_camera_privacy_mode` off.
 
-Press a PTZ button, wait about 6 s, and confirm `sensor.tapo_camera_tilt_angle`
-changed. Expected deltas: +15 pan right, -15 pan left, +10 tilt up, -10 tilt
-down. Read the angle **twice, ~6 s apart** - if it keeps changing, the buttons
-are wired to `moveMotorStep` and the camera is on a runaway sweep. Park on a
-preset before testing, or a limit will answer "already at the end of its
-travel" (correct behaviour, not a bug).
+**Prove PTZ movement without a position sensor** - firmware 1.4.6 has no angle
+read, so you cannot check a sensor. Hash an RTSP frame before and after the
+press instead:
+
+```python
+# ffmpeg -rtsp_transport tcp -i rtsp://tapoadmin:PW@IP:554/stream2 -frames:v 1 -y /tmp/f.jpg
+# md5sum /tmp/f.jpg   -> press the button -> sleep 6 -> repeat; the hash must change
+```
+
+On firmware 1.2.x you can additionally read `sensor.tapo_camera_tilt_angle`
+(expected +15 pan right, -15 left, +10 tilt up, -10 down), reading **twice ~6 s
+apart** - if it keeps changing, the buttons are wired to `moveMotorStep` and the
+camera is on a runaway sweep. Park on a preset before testing, or a limit will
+answer "already at the end of its travel" (correct behaviour, not a bug).
 
 ## Never
 

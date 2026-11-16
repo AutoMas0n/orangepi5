@@ -74,11 +74,52 @@ does not expose options).
 (`static-lease` script in the `pihole-local-dns` repo), so the host in the
 config entry stays correct.
 
+## Firmware 1.4.6 broke PTZ reads — turn auto-upgrade off
+
+The camera **auto-upgraded itself** from `1.2.1 Build 250324` to `1.4.6 Build
+260709` overnight (auto-upgrade was `enabled: "on", time: 03:00`). Screenshot
+and motion kept working; **PTZ position reads died** and the integration's
+pan/tilt sensors went permanently `unknown`.
+
+What 1.4.6 changed:
+
+* The anonymous namespace form is gone: `{"method":"get","ptz":{...}}` now
+  answers `-40210` METHOD_DO_NOT_EXIST. Same for `device_info`, `system`, etc.
+* Named camelCase methods replaced it: `getDeviceInfo`, `getOsd`,
+  `getLedStatus`, `getLensMaskConfig`, `getTime`→`getClockStatus`,
+  `getSDCard`→`getSdCardStatus`. pytapo's high-level reads still work because
+  it already uses named methods.
+* **`getPtzStatus` exists but always returns an empty result.** Brute-forced
+  across every section (`ptz`, `ptz_status`, `motor`, `status`, …), every name
+  (`status`, `all`, `angle_x`, …), and index/channel variants — all empty.
+  *There is no way to read the pan/tilt angle on this firmware.* Upstream pytapo
+  has no support for it either (no matching issue, and the official
+  HomeAssistant-Tapo-Control has no angle sensor at all).
+* **Movement still works.** `moveMotor(x, y)` returns `{}` and physically
+  moves, so the buttons are fine — only the *read* is gone.
+* ONVIF (port 2020) cannot fill the gap: WS-Security UsernameToken auth
+  succeeds (HTTP Basic is rejected with 400), but `GetStatus` returns an empty
+  `PTZStatus` with no Pan/Tilt/Zoom.
+
+The integration therefore probes once at setup and **does not create the angle
+sensors** when the camera will not report a position (`position_readable` in
+`__init__.py` / `device.py`), rather than leaving two entities stuck at
+`unknown`. Delete stale registry entries after a downgrade/upgrade.
+
+**Disable auto-upgrade** or the API can silently change again under you.
+`setFirmwareAutoUpgradeConfig(enabled=False)` fails with a bogus `-40209`
+"Invalid login credentials" unless a time is supplied with it — this works:
+
+```python
+cam.setFirmwareAutoUpgradeConfig(enabled=False, time="03:00")  # -> {}
+```
+
 ## PTZ: what the API actually is on this firmware
 
-Verified against C200 **hw 5.0, fw 1.2.1 Build 250324**. This is the part
-pytapo does not document, and it is why the stock `Tapo.getMotorCapability()`
-fails here.
+Verified against C200 **hw 5.0, fw 1.2.1 Build 250324** (the PTZ calls below
+are the 1.2.x ones — see the firmware section above for what 1.4.6 removed).
+This is the part pytapo does not document, and it is why the stock
+`Tapo.getMotorCapability()` fails here.
 
 * Reads live under the **`ptz`** namespace, movement commands under **`motor`**.
   `Tapo.getMotorCapability()` requests `motor.capability` and gets `-40101`;

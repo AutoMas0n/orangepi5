@@ -60,6 +60,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: TapoC200ConfigEntry) -> 
         )
         coordinator.capability = {}
 
+    # Probe once for a readable pan/tilt angle. Firmware 1.4.6 answers
+    # getPtzStatus with an empty result instead of an error, so this cannot be
+    # inferred from capability - it has to be looked at.
+    device.position_readable = coordinator.position_readable = bool(
+        await device.async_motor_status()
+    )
+    if not coordinator.position_readable:
+        _LOGGER.info(
+            "%s: camera does not report a pan/tilt angle (firmware removed the "
+            "read); PTZ buttons still work, position sensors are not created",
+            entry.data[CONF_HOST],
+        )
+
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
