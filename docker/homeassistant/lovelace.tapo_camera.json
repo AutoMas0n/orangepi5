@@ -7,16 +7,6 @@
       "type": "sidebar",
       "cards": [
         {
-          "type": "button",
-          "entity": "input_boolean.tapo_ptz_controls_visible",
-          "name": "PTZ controls",
-          "icon": "mdi:eye",
-          "show_state": true,
-          "tap_action": {
-            "action": "toggle"
-          }
-        },
-        {
           "type": "conditional",
           "conditions": [
             {
@@ -34,18 +24,24 @@
               {
                 "type": "state-icon",
                 "entity": "button.tapo_camera_ptz_up",
-                "icon": "mdi:arrow-up",
+                "icon": "mdi:chevron-up",
+                "title": "Tilt up",
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.45)",
+                  "background": "rgba(0,0,0,0.55)",
+                  "border": "1px solid rgba(255,255,255,0.35)",
                   "border-radius": "50%",
-                  "padding": "7px",
-                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
-                  "--mdc-icon-size": "30px",
+                  "width": "44px",
+                  "height": "44px",
+                  "display": "flex",
+                  "align-items": "center",
+                  "justify-content": "center",
+                  "filter": "drop-shadow(0 0 4px rgba(0,0,0,0.9))",
+                  "--mdc-icon-size": "24px",
                   "cursor": "pointer",
-                  "top": "58%",
-                  "left": "12%",
+                  "left": "calc(50% + 0px)",
+                  "top": "calc(62% + -52px)",
                   "transform": "translate(-50%,-50%)"
                 },
                 "tap_action": {
@@ -59,18 +55,24 @@
               {
                 "type": "state-icon",
                 "entity": "button.tapo_camera_ptz_left",
-                "icon": "mdi:arrow-left",
+                "icon": "mdi:chevron-left",
+                "title": "Pan left",
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.45)",
+                  "background": "rgba(0,0,0,0.55)",
+                  "border": "1px solid rgba(255,255,255,0.35)",
                   "border-radius": "50%",
-                  "padding": "7px",
-                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
-                  "--mdc-icon-size": "30px",
+                  "width": "44px",
+                  "height": "44px",
+                  "display": "flex",
+                  "align-items": "center",
+                  "justify-content": "center",
+                  "filter": "drop-shadow(0 0 4px rgba(0,0,0,0.9))",
+                  "--mdc-icon-size": "24px",
                   "cursor": "pointer",
-                  "top": "72%",
-                  "left": "7%",
+                  "left": "calc(50% + -52px)",
+                  "top": "calc(62% + 0px)",
                   "transform": "translate(-50%,-50%)"
                 },
                 "tap_action": {
@@ -85,17 +87,23 @@
                 "type": "state-icon",
                 "entity": "button.tapo_camera_calibrate_motor",
                 "icon": "mdi:crosshairs-gps",
+                "title": "Calibrate",
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.45)",
+                  "background": "rgba(0,0,0,0.55)",
+                  "border": "1px solid rgba(255,255,255,0.35)",
                   "border-radius": "50%",
-                  "padding": "7px",
-                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
-                  "--mdc-icon-size": "30px",
+                  "width": "44px",
+                  "height": "44px",
+                  "display": "flex",
+                  "align-items": "center",
+                  "justify-content": "center",
+                  "filter": "drop-shadow(0 0 4px rgba(0,0,0,0.9))",
+                  "--mdc-icon-size": "24px",
                   "cursor": "pointer",
-                  "top": "72%",
-                  "left": "12%",
+                  "left": "calc(50% + 0px)",
+                  "top": "calc(62% + 0px)",
                   "transform": "translate(-50%,-50%)"
                 },
                 "tap_action": {
@@ -109,18 +117,24 @@
               {
                 "type": "state-icon",
                 "entity": "button.tapo_camera_ptz_right",
-                "icon": "mdi:arrow-right",
+                "icon": "mdi:chevron-right",
+                "title": "Pan right",
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.45)",
+                  "background": "rgba(0,0,0,0.55)",
+                  "border": "1px solid rgba(255,255,255,0.35)",
                   "border-radius": "50%",
-                  "padding": "7px",
-                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
-                  "--mdc-icon-size": "30px",
+                  "width": "44px",
+                  "height": "44px",
+                  "display": "flex",
+                  "align-items": "center",
+                  "justify-content": "center",
+                  "filter": "drop-shadow(0 0 4px rgba(0,0,0,0.9))",
+                  "--mdc-icon-size": "24px",
                   "cursor": "pointer",
-                  "top": "72%",
-                  "left": "17%",
+                  "left": "calc(50% + 52px)",
+                  "top": "calc(62% + 0px)",
                   "transform": "translate(-50%,-50%)"
                 },
                 "tap_action": {
@@ -134,18 +148,24 @@
               {
                 "type": "state-icon",
                 "entity": "button.tapo_camera_ptz_down",
-                "icon": "mdi:arrow-down",
+                "icon": "mdi:chevron-down",
+                "title": "Tilt down",
                 "state_color": false,
                 "style": {
                   "color": "#ffffff",
-                  "background": "rgba(0,0,0,0.45)",
+                  "background": "rgba(0,0,0,0.55)",
+                  "border": "1px solid rgba(255,255,255,0.35)",
                   "border-radius": "50%",
-                  "padding": "7px",
-                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
-                  "--mdc-icon-size": "30px",
+                  "width": "44px",
+                  "height": "44px",
+                  "display": "flex",
+                  "align-items": "center",
+                  "justify-content": "center",
+                  "filter": "drop-shadow(0 0 4px rgba(0,0,0,0.9))",
+                  "--mdc-icon-size": "24px",
                   "cursor": "pointer",
-                  "top": "86%",
-                  "left": "12%",
+                  "left": "calc(50% + 0px)",
+                  "top": "calc(62% + 52px)",
                   "transform": "translate(-50%,-50%)"
                 },
                 "tap_action": {
@@ -178,13 +198,25 @@
         },
         {
           "type": "entities",
+          "entities": [
+            {
+              "entity": "input_boolean.tapo_ptz_controls_visible",
+              "name": "PTZ controls",
+              "icon": "mdi:gamepad",
+              "tap_action": {
+                "action": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "type": "entities",
           "title": "Quick controls",
           "entities": [
             "select.tapo_camera_preset",
             "switch.tapo_camera_privacy_mode",
             "switch.tapo_camera_motion_detection",
-            "switch.tapo_camera_status_led",
-            "binary_sensor.tapo_camera_motion_detection_active"
+            "switch.tapo_camera_status_led"
           ]
         },
         {
@@ -198,6 +230,10 @@
             {
               "entity": "sensor.tapo_camera_tilt_angle",
               "name": "Tilt"
+            },
+            {
+              "entity": "binary_sensor.tapo_camera_motion_detection_active",
+              "name": "Motion setting"
             }
           ]
         }

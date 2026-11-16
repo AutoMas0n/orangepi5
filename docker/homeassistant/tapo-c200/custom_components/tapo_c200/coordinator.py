@@ -80,12 +80,13 @@ class TapoC200Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         await call(func, *args, **kwargs)
         await self.async_refresh()
 
-    async def async_move_step(self, direction: int) -> None:
-        await self.device.async_call("moveMotorStep", direction)
-        self._schedule_position_refresh()
+    async def async_nudge(self, dx: int, dy: int) -> None:
+        """Move by a fixed number of degrees.
 
-    async def async_move(self, x: str, y: str) -> None:
-        await self.device.async_call("moveMotor", x, y)
+        Deliberately moveMotor(x, y) and not moveMotorStep(direction): the
+        latter starts a continuous sweep that cannot be stopped (see const.py).
+        """
+        await self.device.async_call("moveMotor", dx, dy)
         self._schedule_position_refresh()
 
     async def async_calibrate(self) -> None:

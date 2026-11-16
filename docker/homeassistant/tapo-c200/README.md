@@ -30,9 +30,17 @@ Live state on the Orange Pi: entry `Tapo_Camera`, camera at `192.168.2.57`
 The dashboard for these lives in the parent directory:
 `docker/homeassistant/lovelace.tapo_camera.json`, applied to `/tapo-camera` by
 `apply-dashboard.sh tapo_camera`. Its PTZ overlay is a 5-button pad (up, down,
-left, right, calibrate) rather than iCSee's 12 - the C200 has no optical zoom,
-no diagonal move, and no continuous-motion `stop` (a press is a fixed step, so
-there is nothing to stop).
+left, right, calibrate) rather than iCSee's 12 - the C200 has no optical zoom
+and no diagonal move. It also has no `stop`, but not for iCSee's reason: these
+buttons use `moveMotor(x, y)`, a **finite relative move in degrees**, so a press
+ends by itself. Never wire them to `moveMotorStep(direction)` - that starts a
+continuous sweep which no command can stop (measurements in
+`../README.md`'s PTZ section).
+
+The overlay is a centred 3x3 pad at a fixed 52 px pitch with 44 px round hit
+areas instead of percentage positions: on a ~350 px phone card a 7% gap is only
+~25 px, which made the buttons collide. The controls toggle is a compact
+`entities` row, not a `button` card - that renders as a huge tile on mobile.
 
 ## Install
 
@@ -78,15 +86,22 @@ fails here.
   `{"method":"get","ptz":{"name":["capability"]}}`.
 * Position: `{"method":"get","ptz":{"name":["status"]}}` ->
   `angle_x` (0-360, wraps), `angle_y` (signed, roughly -15..55 on this unit).
-* `moveMotorStep(direction)` takes a **direction selector**, not degrees of
-  travel. Measured by reading `angle_x`/`angle_y` around each call:
+* **`moveMotorStep(direction)` is unusable for a button: it starts a
+  continuous sweep that never stops by itself.** One call at direction `0`
+  swept `angle_x` 162 -> 208.5 -> 259.1 -> 311.2 -> 340.0 (the hard limit) at
+  about 50 deg/s and stayed there. There is no stop command - `moveMotor(0,0)`
+  answers **-64304** mid-travel and does not halt the motor, every `ptz` write
+  shape returns **-40101**, and `motorStop` / `stopMotor` / `manualStop` desync
+  the transport (the camera replies with a `BadStatusLine` on the next POST).
+  Recovery is `setPreset(<id>)` or waiting for the limit.
 
-  | value | effect |
-  | --- | --- |
-  | 90 | `angle_y` increases - looks **up** |
-  | 270 | `angle_y` decreases - looks **down** |
-  | 0 | `angle_x` increases - pans clockwise from above |
-  | 180 | `angle_x` decreases - opposite |
+* **`moveMotor(x, y)` is a finite *relative* move in DEGREES** and is the
+  primitive the buttons use. Verified to the hundredth of a degree:
+  `moveMotor(20, 0)` -> `angle_x` +20.00, `moveMotor(0, -5)` -> `angle_y`
+  -5.00, `moveMotor(-15, 0)` -> -15.00. `+y` is up, `+x` pans clockwise seen
+  from above. It settles in about a second and holds. The integration nudges
+  15 deg in pan and 10 deg in tilt (`PTZ_NUDGE_DEGREES` /
+  `PTZ_TILT_NUDGE_DEGREES` in `const.py`).
 
 * At the end of travel the camera answers **-64304** "Maximum Pan/Tilt range
   reached (MOTOR_LOCKED_ROTOR)". That is normal, not a fault: the button
@@ -96,8 +111,16 @@ fails here.
   `{"preset":{"name":["preset"]}}`, save via
   `{"preset":{"set_preset":{"name":..., "save_ptz":"1"}}}`, delete via
   `{"preset":{"remove_preset":{"id":[...]}}}`. Max 8 presets.
-* A step takes ~2 s to physically move and report, so the integration re-reads
+* A nudge takes about a second to travel and report, so the integration re-reads
   the position after a delay instead of immediately (see below).
+
+* The capability block (`ptz.capability`) reports
+  `absolute_move_supported`, `relative_move_supported`,
+  `continuous_move_supported` all `1`, `position_pan_range` /
+  `position_tilt_range` `[-1, 1]`, and `beyond_move_range` `[-4, 4]`. The
+  absolute form is not reachable from pytapo: a raw `motor.move` with
+  `x_coord`/`y_coord` floats returns `-40407` and poisons the session, so only
+  the relative `moveMotor` path is safe to call.
 
 ## Design notes / traps hit while building this
 

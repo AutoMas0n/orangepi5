@@ -134,10 +134,23 @@ Namespace split on this firmware - **reads under `ptz`, movement under `motor`**
   request `{"method":"get","ptz":{"name":["capability"]}}`.
 - Position: `{"method":"get","ptz":{"name":["status"]}}` -> `angle_x` (0-360,
   wraps), `angle_y` (signed, about -15..55 on this unit).
-- `moveMotorStep(direction)` is a **direction selector**, not a distance:
-  90 = up, 270 = down, 0 = clockwise, 180 = counter-clockwise. Verified by
-  reading the angles around each call - re-verify on a different model rather
-  than assuming.
+- **`moveMotorStep(direction)` is a trap - do not use it for a button.** It
+  starts a *continuous* sweep that never stops by itself: one call at direction
+  `0` took `angle_x` 162 -> 208.5 -> 259.1 -> 311.2 -> 340.0 (hard limit) at
+  about 50 deg/s. Nothing halts it - `moveMotor(0,0)` returns `-64304`
+  mid-travel without stopping, every `ptz` write shape returns `-40101`, and
+  `motorStop`/`stopMotor`/`manualStop` desync the transport (`BadStatusLine` on
+  the next POST). Recovery is `setPreset(<id>)` or waiting for the limit.
+  Symptoms if you get this wrong: "I can't stop it".
+- **`moveMotor(x, y)` is the primitive to use: a finite *relative* move whose
+  units are DEGREES.** Verified to 0.01 deg - `moveMotor(20, 0)` -> `angle_x`
+  +20.00, `moveMotor(0, -5)` -> `angle_y` -5.00, `moveMotor(-15, 0)` -> -15.00.
+  `+y` is up, `+x` pans clockwise seen from above; it settles in ~1 s and
+  holds. Nudge 15 deg pan / 10 deg tilt.
+- Raw (non-`multipleRequest`) `motor` payloads kill the session
+  (`ConnectionError: BadStatusLine('POST /stok=...\x00HTTP/1.1')`) and a raw
+  `motor.move` with `x_coord`/`y_coord` floats answers `-40407`. Call motor
+  commands through pytapo's own methods, which wrap in `multipleRequest`.
 - `-64304` = at the end of travel (normal), `-64303` = motor busy,
   `-64302` = preset missing.
 - Presets use their own namespace: get `{"preset":{"name":["preset"]}}`, save
@@ -176,8 +189,19 @@ toggle needs `input_boolean.tapo_ptz_controls_visible` in
 `configuration.yaml` - add it before the dashboard, or the toggle card is dead.
 
 PTZ overlay differs from iCSee's on purpose: 5 buttons (up/down/left/right +
-calibrate), because the C200 has no optical zoom, no diagonal move, and no
-continuous-motion `stop` - a press is a fixed step, so nothing needs stopping.
+calibrate), because the C200 has no optical zoom and no diagonal move. There is
+no `stop` because the buttons use `moveMotor(x, y)` - a finite relative move -
+so a press ends by itself. Never wire them to `moveMotorStep`.
+
+Two layout rules learned from the user's phone:
+
+- **Don't position overlay buttons in percent.** On a ~350 px phone card a 7%
+gap is ~25 px, so 30 px icons visually collide ("smushed together"). Use a fixed
+px pitch: the pad is a 3x3 grid at 52 px pitch with 44 px round hit areas,
+centred at 50%/62% of the frame.
+- **Don't use a `button` card for the overlay toggle.** It renders as a huge
+tile on mobile ("the button with the eye is huge"). Use a compact `entities`
+row with `tap_action: toggle`.
 
 ## 8. Verify in Home Assistant
 
@@ -192,8 +216,11 @@ is live. If the image says "Privacy Mode is on", a previous test left it on -
 turn `switch.tapo_camera_privacy_mode` off.
 
 Press a PTZ button, wait about 6 s, and confirm `sensor.tapo_camera_tilt_angle`
-changed. The button may legitimately fail with "already at the end of its
-travel" at a limit - that is correct behaviour, not a bug.
+changed. Expected deltas: +15 pan right, -15 pan left, +10 tilt up, -10 tilt
+down. Read the angle **twice, ~6 s apart** - if it keeps changing, the buttons
+are wired to `moveMotorStep` and the camera is on a runaway sweep. Park on a
+preset before testing, or a limit will answer "already at the end of its
+travel" (correct behaviour, not a bug).
 
 ## Never
 

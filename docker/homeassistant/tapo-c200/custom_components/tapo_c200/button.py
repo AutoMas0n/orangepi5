@@ -23,28 +23,23 @@ from .entity import TapoC200Entity
 
 @dataclass(frozen=True, kw_only=True)
 class TapoPtzButtonDescription(ButtonEntityDescription):
-    """A PTZ direction button."""
+    """A PTZ nudge button."""
 
-    direction: int
+    dx: int
+    dy: int
 
 
-PTZ_BUTTONS: tuple[TapoPtzButtonDescription, ...] = (
+PTZ_BUTTONS: tuple[TapoPtzButtonDescription, ...] = tuple(
     TapoPtzButtonDescription(
-        key="ptz_up", translation_key="ptz_up", icon="mdi:arrow-up-bold",
-        direction=PTZ_DIRECTIONS["up"],
-    ),
-    TapoPtzButtonDescription(
-        key="ptz_down", translation_key="ptz_down", icon="mdi:arrow-down-bold",
-        direction=PTZ_DIRECTIONS["down"],
-    ),
-    TapoPtzButtonDescription(
-        key="ptz_left", translation_key="ptz_left", icon="mdi:arrow-left-bold",
-        direction=PTZ_DIRECTIONS["counter_clockwise"],
-    ),
-    TapoPtzButtonDescription(
-        key="ptz_right", translation_key="ptz_right", icon="mdi:arrow-right-bold",
-        direction=PTZ_DIRECTIONS["clockwise"],
-    ),
+        key=f"ptz_{name}", translation_key=f"ptz_{name}", icon=icon,
+        dx=PTZ_DIRECTIONS[direction][0], dy=PTZ_DIRECTIONS[direction][1],
+    )
+    for name, direction, icon in (
+        ("up", "up", "mdi:arrow-up-bold"),
+        ("down", "down", "mdi:arrow-down-bold"),
+        ("left", "counter_clockwise", "mdi:arrow-left-bold"),
+        ("right", "clockwise", "mdi:arrow-right-bold"),
+    )
 )
 
 
@@ -62,7 +57,7 @@ async def async_setup_entry(
 
 
 class TapoPtzButton(TapoC200Entity, ButtonEntity):
-    """Nudge the camera one step in a direction."""
+    """Nudge the camera by a fixed number of degrees."""
 
     entity_description: TapoPtzButtonDescription
 
@@ -74,7 +69,9 @@ class TapoPtzButton(TapoC200Entity, ButtonEntity):
 
     async def async_press(self) -> None:
         try:
-            await self.coordinator.async_move_step(self.entity_description.direction)
+            await self.coordinator.async_nudge(
+                self.entity_description.dx, self.entity_description.dy
+            )
         except TapoError as err:
             message = str(err)
             # Reaching a limit is not a fault: the camera is simply already at
