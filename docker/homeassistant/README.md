@@ -16,6 +16,28 @@ The only unrecoverable case is losing the owner account entirely - that means a
 fresh onboarding, i.e. losing the config. That is why the password is in
 `secrets`.
 
+## Tapo C200 camera (integration + PTZ)
+
+The second camera is a TP-Link Tapo C200 at `192.168.2.57`, set up **without a
+TP-Link cloud account** and used through the local integration in
+[`tapo-c200/`](tapo-c200/) (`custom_components/tapo_c200`, source of truth in this
+repo). Nothing here talks to TP-Link; the camera's cloud domains are
+NXDOMAIN'd via `deny-domain` and its address is pinned with `static-lease` (both
+in the `pihole-local-dns` repo).
+
+Install (the integration is service state, this directory is the source):
+
+    scp -r docker/homeassistant/tapo-c200/custom_components/tapo_c200 \
+        orangepi@192.168.2.113:/home/orangepi/docker-data/homeassistant/custom_components/
+    docker restart homeassistant        # required - custom components are cached at startup
+
+The entry needs **both** accounts: `admin` + the admin password for the API, and
+`tapoadmin` + the same password for RTSP/ONVIF. The live feed fails with
+`401 Unauthorized` if the wrong one is used. Details, PTZ API quirks and the traps hit while
+building it: [`tapo-c200/README.md`](tapo-c200/README.md). The whole procedure
+(provisioning a fresh camera included) is also captured as a repo skill at
+`.pi/skills/tapo-c200-local-setup/`.
+
 ## iCSee camera (integration + dashboard)
 
 The camera is an XM/iCSee device at `192.168.2.33:34567` (onvif/RTSP on :554),

@@ -1,0 +1,81 @@
+{
+  "config": {
+    "flow_title": "Tapo C200 ({host})",
+    "step": {
+      "user": {
+        "title": "Connect to a local Tapo camera",
+        "description": "Enter the camera's LAN address and its **camera account** credentials (local only - no TP-Link cloud account is used).",
+        "data": {
+          "host": "Host",
+          "username": "Camera account username",
+          "password": "Camera account password"
+        }
+      },
+      "rtsp": {
+        "title": "RTSP credentials",
+        "description": "The RTSP stream can use a different account from the API. Leave blank to reuse the camera account above.",
+        "data": {
+          "rtsp_username": "RTSP username",
+          "rtsp_password": "RTSP password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate",
+        "description": "The camera rejected the stored credentials. Enter the current ones.",
+        "data": {
+          "username": "Camera account username",
+          "password": "Camera account password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach the camera at that address.",
+      "invalid_auth": "The camera rejected those credentials.",
+      "unknown": "Unexpected error talking to the camera."
+    },
+    "abort": {
+      "already_configured": "This camera is already configured.",
+      "reauth_successful": "Reauthentication succeeded."
+    }
+  },
+  "entity": {
+    "button": {
+      "ptz_up": { "name": "PTZ up" },
+      "ptz_down": { "name": "PTZ down" },
+      "ptz_left": { "name": "PTZ left" },
+      "ptz_right": { "name": "PTZ right" },
+      "calibrate": { "name": "Calibrate motor" }
+    },
+    "camera": {
+      "main_stream": { "name": "Main stream" },
+      "sub_stream": { "name": "Sub stream" }
+    },
+    "switch": {
+      "privacy_mode": { "name": "Privacy mode" },
+      "motion_detection": { "name": "Motion detection" },
+      "status_led": { "name": "Status LED" }
+    },
+    "select": {
+      "preset": { "name": "Preset" }
+    },
+    "sensor": {
+      "angle_pan": { "name": "Pan angle" },
+      "angle_tilt": { "name": "Tilt angle" },
+      "storage": { "name": "SD card used" }
+    },
+    "binary_sensor": {
+      "motion_detection_active": { "name": "Motion detection active" }
+    }
+  },
+  "exceptions": {
+    "motor_at_limit": {
+      "message": "The camera is already at the end of its travel in that direction."
+    },
+    "motor_busy": {
+      "message": "The camera motor is busy. Try again in a moment."
+    },
+    "preset_missing": {
+      "message": "Preset {name} no longer exists on the camera."
+    }
+  }
+}
