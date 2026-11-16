@@ -1,0 +1,241 @@
+{
+  "views": [
+    {
+      "title": "Tapo",
+      "path": "main",
+      "icon": "mdi:cctv",
+      "type": "sidebar",
+      "cards": [
+        {
+          "type": "button",
+          "entity": "input_boolean.tapo_ptz_controls_visible",
+          "name": "PTZ controls",
+          "icon": "mdi:eye",
+          "show_state": true,
+          "tap_action": {
+            "action": "toggle"
+          }
+        },
+        {
+          "type": "conditional",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity": "input_boolean.tapo_ptz_controls_visible",
+              "state": "on"
+            }
+          ],
+          "card": {
+            "type": "picture-elements",
+            "camera_image": "camera.tapo_camera_main_stream",
+            "camera_view": "live",
+            "aspect_ratio": "16:9",
+            "elements": [
+              {
+                "type": "state-icon",
+                "entity": "button.tapo_camera_ptz_up",
+                "icon": "mdi:arrow-up",
+                "state_color": false,
+                "style": {
+                  "color": "#ffffff",
+                  "background": "rgba(0,0,0,0.45)",
+                  "border-radius": "50%",
+                  "padding": "7px",
+                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                  "--mdc-icon-size": "30px",
+                  "cursor": "pointer",
+                  "top": "58%",
+                  "left": "12%",
+                  "transform": "translate(-50%,-50%)"
+                },
+                "tap_action": {
+                  "action": "perform-action",
+                  "perform_action": "button.press",
+                  "target": {
+                    "entity_id": "button.tapo_camera_ptz_up"
+                  }
+                }
+              },
+              {
+                "type": "state-icon",
+                "entity": "button.tapo_camera_ptz_left",
+                "icon": "mdi:arrow-left",
+                "state_color": false,
+                "style": {
+                  "color": "#ffffff",
+                  "background": "rgba(0,0,0,0.45)",
+                  "border-radius": "50%",
+                  "padding": "7px",
+                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                  "--mdc-icon-size": "30px",
+                  "cursor": "pointer",
+                  "top": "72%",
+                  "left": "7%",
+                  "transform": "translate(-50%,-50%)"
+                },
+                "tap_action": {
+                  "action": "perform-action",
+                  "perform_action": "button.press",
+                  "target": {
+                    "entity_id": "button.tapo_camera_ptz_left"
+                  }
+                }
+              },
+              {
+                "type": "state-icon",
+                "entity": "button.tapo_camera_calibrate_motor",
+                "icon": "mdi:crosshairs-gps",
+                "state_color": false,
+                "style": {
+                  "color": "#ffffff",
+                  "background": "rgba(0,0,0,0.45)",
+                  "border-radius": "50%",
+                  "padding": "7px",
+                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                  "--mdc-icon-size": "30px",
+                  "cursor": "pointer",
+                  "top": "72%",
+                  "left": "12%",
+                  "transform": "translate(-50%,-50%)"
+                },
+                "tap_action": {
+                  "action": "perform-action",
+                  "perform_action": "button.press",
+                  "target": {
+                    "entity_id": "button.tapo_camera_calibrate_motor"
+                  }
+                }
+              },
+              {
+                "type": "state-icon",
+                "entity": "button.tapo_camera_ptz_right",
+                "icon": "mdi:arrow-right",
+                "state_color": false,
+                "style": {
+                  "color": "#ffffff",
+                  "background": "rgba(0,0,0,0.45)",
+                  "border-radius": "50%",
+                  "padding": "7px",
+                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                  "--mdc-icon-size": "30px",
+                  "cursor": "pointer",
+                  "top": "72%",
+                  "left": "17%",
+                  "transform": "translate(-50%,-50%)"
+                },
+                "tap_action": {
+                  "action": "perform-action",
+                  "perform_action": "button.press",
+                  "target": {
+                    "entity_id": "button.tapo_camera_ptz_right"
+                  }
+                }
+              },
+              {
+                "type": "state-icon",
+                "entity": "button.tapo_camera_ptz_down",
+                "icon": "mdi:arrow-down",
+                "state_color": false,
+                "style": {
+                  "color": "#ffffff",
+                  "background": "rgba(0,0,0,0.45)",
+                  "border-radius": "50%",
+                  "padding": "7px",
+                  "filter": "drop-shadow(0 0 3px rgba(0,0,0,0.8))",
+                  "--mdc-icon-size": "30px",
+                  "cursor": "pointer",
+                  "top": "86%",
+                  "left": "12%",
+                  "transform": "translate(-50%,-50%)"
+                },
+                "tap_action": {
+                  "action": "perform-action",
+                  "perform_action": "button.press",
+                  "target": {
+                    "entity_id": "button.tapo_camera_ptz_down"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "conditional",
+          "conditions": [
+            {
+              "condition": "state",
+              "entity": "input_boolean.tapo_ptz_controls_visible",
+              "state": "off"
+            }
+          ],
+          "card": {
+            "type": "picture-elements",
+            "camera_image": "camera.tapo_camera_main_stream",
+            "camera_view": "live",
+            "aspect_ratio": "16:9",
+            "elements": []
+          }
+        },
+        {
+          "type": "entities",
+          "title": "Quick controls",
+          "entities": [
+            "select.tapo_camera_preset",
+            "switch.tapo_camera_privacy_mode",
+            "switch.tapo_camera_motion_detection",
+            "switch.tapo_camera_status_led",
+            "binary_sensor.tapo_camera_motion_detection_active"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Position",
+          "entities": [
+            {
+              "entity": "sensor.tapo_camera_pan_angle",
+              "name": "Pan"
+            },
+            {
+              "entity": "sensor.tapo_camera_tilt_angle",
+              "name": "Tilt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Status",
+      "path": "status",
+      "icon": "mdi:information-outline",
+      "cards": [
+        {
+          "type": "entities",
+          "title": "Camera",
+          "entities": [
+            "sensor.tapo_camera_pan_angle",
+            "sensor.tapo_camera_tilt_angle",
+            "sensor.tapo_camera_sd_card_used"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Privacy & detection",
+          "entities": [
+            "switch.tapo_camera_privacy_mode",
+            "switch.tapo_camera_motion_detection",
+            "binary_sensor.tapo_camera_motion_detection_active",
+            "switch.tapo_camera_status_led"
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Streams",
+          "entities": [
+            "camera.tapo_camera_main_stream",
+            "camera.tapo_camera_sub_stream"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -27,6 +27,13 @@ Live state on the Orange Pi: entry `Tapo_Camera`, camera at `192.168.2.57`
 | `switch.tapo_camera_status_led` | front LED on/off |
 | `binary_sensor.tapo_camera_motion_detection_active` | mirrors the switch (see caveat) |
 
+The dashboard for these lives in the parent directory:
+`docker/homeassistant/lovelace.tapo_camera.json`, applied to `/tapo-camera` by
+`apply-dashboard.sh tapo_camera`. Its PTZ overlay is a 5-button pad (up, down,
+left, right, calibrate) rather than iCSee's 12 - the C200 has no optical zoom,
+no diagonal move, and no continuous-motion `stop` (a press is a fixed step, so
+there is nothing to stop).
+
 ## Install
 
 The integration is service state in the HA config, but the source lives here:

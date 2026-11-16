@@ -38,6 +38,31 @@ building it: [`tapo-c200/README.md`](tapo-c200/README.md). The whole procedure
 (provisioning a fresh camera included) is also captured as a repo skill at
 `.pi/skills/tapo-c200-local-setup/`.
 
+## Dashboards
+
+Two storage-mode Lovelace dashboards, one per camera, both flagged
+`show_in_sidebar`:
+
+| Sidebar | URL | Source | Camera |
+| --- | --- | --- | --- |
+| **Tapo** | `/tapo-camera` | `lovelace.tapo_camera.json` | Tapo C200 |
+| **iCSee** | `/icsee-camera` | `lovelace.icsee_camera.json` | iCSee XM |
+
+Each has a `main` view with a live `picture-elements` feed and an overlay PTZ
+toggle, plus a `status` view. Lovelace config is service state
+(`.storage/lovelace.<id>`) and is deliberately not in git; the JSON files here
+are the source of truth. Re-apply after editing:
+
+    ./docker/homeassistant/apply-dashboard.sh tapo_camera
+    ./docker/homeassistant/apply-dashboard.sh icsee_camera
+
+It logs in with `HA_USER` / `HA_PASS` from `secrets` (no token is stored),
+creates the dashboard registration if missing, renames it if the title or icon
+changed, and saves the config through HA's websocket API. Idempotent - safe to
+re-run any time. The PTZ overlay toggles are backed by
+`input_boolean.tapo_ptz_controls_visible` and
+`input_boolean.icsee_ptz_controls_visible` in `configuration.yaml`.
+
 ## iCSee camera (integration + dashboard)
 
 The camera is an XM/iCSee device at `192.168.2.33:34567` (onvif/RTSP on :554),
@@ -87,15 +112,8 @@ input_boolean:
     initial: true
 ```
 
-Lovelace config is service state (`.storage/lovelace.icsee_camera`) and is
-deliberately not in git. `lovelace.icsee_camera.json` in this directory *is* the
-source of truth; re-apply it with:
-
-    sudo ./docker/homeassistant/apply-dashboard.sh
-
-It logs in with `HA_USER` / `HA_PASS` from `secrets` (no token is stored), creates
-the dashboard registration if missing, and saves the config through HA's
-websocket API. Idempotent - safe to re-run.
+Re-apply the dashboard with `./docker/homeassistant/apply-dashboard.sh
+icsee_camera` (see **Dashboards** above).
 
 ### PTZ quirks (verified on this camera)
 

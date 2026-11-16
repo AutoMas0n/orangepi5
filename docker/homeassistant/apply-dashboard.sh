@@ -1,5 +1,9 @@
 #!/bin/bash
-# Re-apply the "Camera" Lovelace dashboard from lovelace.icsee_camera.json.
+# Re-apply a camera Lovelace dashboard from its JSON source in this directory.
+#
+# Defaults to the iCSee dashboard; pass a slug to apply another one:
+#     ./docker/homeassistant/apply-dashboard.sh icsee_camera   # "iCSee"  -> /icsee-camera
+#     ./docker/homeassistant/apply-dashboard.sh tapo_camera    # "Tapo"   -> /tapo-camera
 #
 # The dashboard lives in HA's storage (.storage/lovelace.icsee_camera), which is
 # service state and is deliberately not in git. This script is the reproducible
@@ -11,19 +15,29 @@
 # long-lived token is stored anywhere. Idempotent: safe to run any time.
 #
 # Usage (on the Pi, where the HA container runs):
-#     sudo ./docker/homeassistant/apply-dashboard.sh
+#     sudo ./docker/homeassistant/apply-dashboard.sh [slug]
 #
 # Overrides:
 #     HA_URL=http://localhost:8123   HA_CONTAINER=homeassistant
-#     HA_DASHBOARD_URL_PATH=icsee-camera
+#     HA_DASHBOARD_URL_PATH   HA_DASHBOARD_TITLE   HA_DASHBOARD_ICON
 set -euo pipefail
 
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-CONFIG="$REPO/docker/homeassistant/lovelace.icsee_camera.json"
+SLUG=${1:-icsee_camera}
+
+# slug -> url_path / sidebar title / icon. Anything unlisted still works, it
+# just needs the overrides below.
+case "$SLUG" in
+  icsee_camera) DEF_PATH=icsee-camera; DEF_TITLE=iCSee ;;
+  tapo_camera)  DEF_PATH=tapo-camera;  DEF_TITLE=Tapo  ;;
+  *)            DEF_PATH=${SLUG//_/-}; DEF_TITLE=$SLUG ;;
+esac
+
+CONFIG="$REPO/docker/homeassistant/lovelace.$SLUG.json"
 HA_URL=${HA_URL:-http://localhost:8123}
 CONTAINER=${HA_CONTAINER:-homeassistant}
-URL_PATH=${HA_DASHBOARD_URL_PATH:-icsee-camera}
-TITLE=${HA_DASHBOARD_TITLE:-Camera}
+URL_PATH=${HA_DASHBOARD_URL_PATH:-$DEF_PATH}
+TITLE=${HA_DASHBOARD_TITLE:-$DEF_TITLE}
 ICON=${HA_DASHBOARD_ICON:-mdi:cctv}
 
 # shellcheck disable=SC1091
@@ -39,12 +53,12 @@ $DOCKER ps --format '{{.Names}}' | grep -qx "$CONTAINER" \
 
 # The websockets client only exists inside the HA container, so the payload runs
 # there. Copy the config where the container can read it, then pipe the rest.
-$DOCKER cp "$CONFIG" "$CONTAINER:/tmp/lovelace.icsee_camera.json"
+$DOCKER cp "$CONFIG" "$CONTAINER:/tmp/lovelace.$SLUG.json"
 
 HA_URL="$HA_URL" HA_USER="$HA_USER" HA_PASS="$HA_PASS" \
-URL_PATH="$URL_PATH" TITLE="$TITLE" ICON="$ICON" \
+URL_PATH="$URL_PATH" TITLE="$TITLE" ICON="$ICON" SLUG="$SLUG" \
   $DOCKER exec -i -e HA_URL -e HA_USER -e HA_PASS -e URL_PATH -e TITLE -e ICON \
-    "$CONTAINER" python3 - <<'PY'
+    -e SLUG "$CONTAINER" python3 - <<'PY'
 import asyncio, json, os, urllib.parse, urllib.request
 
 import websockets  # shipped with Home Assistant (verified: 15.0.1)
@@ -55,7 +69,7 @@ PASSWORD = os.environ["HA_PASS"]
 URL_PATH = os.environ["URL_PATH"]
 TITLE    = os.environ["TITLE"]
 ICON     = os.environ["ICON"]
-CONFIG   = "/tmp/lovelace.icsee_camera.json"
+CONFIG   = f"/tmp/lovelace.{os.environ['SLUG']}.json"
 CLIENT_ID = HA_URL + "/"
 
 
@@ -122,7 +136,9 @@ async def main():
 
         # Register the dashboard if it is not there yet, so a fresh HA gets it too.
         dash = await call(1, type="lovelace/dashboards/list")
-        if not any(d.get("url_path") == URL_PATH for d in dash.get("result", [])):
+        existing = next((d for d in dash.get("result", [])
+                         if d.get("url_path") == URL_PATH), None)
+        if existing is None:
             created = await call(
                 2, type="lovelace/dashboards/create", url_path=URL_PATH,
                 title=TITLE, icon=ICON, show_in_sidebar=True,
@@ -131,6 +147,18 @@ async def main():
             if not created.get("success"):
                 raise SystemExit(f"dashboard create failed: {created}")
             print(f"  created dashboard '{URL_PATH}'")
+        elif (existing.get("title"), existing.get("icon")) != (TITLE, ICON):
+            # Renaming in the sidebar is part of the source of truth, so keep it
+            # in sync instead of only applying the title at create time.
+            updated = await call(
+                2, type="lovelace/dashboards/update", dashboard_id=existing["id"],
+                title=TITLE, icon=ICON, show_in_sidebar=True,
+                require_admin=False,
+            )
+            if not updated.get("success"):
+                raise SystemExit(f"dashboard update failed: {updated}")
+            print(f"  renamed dashboard '{URL_PATH}': "
+                  f"{existing.get('title')!r} -> {TITLE!r}")
         else:
             print(f"  dashboard '{URL_PATH}' already registered")
 

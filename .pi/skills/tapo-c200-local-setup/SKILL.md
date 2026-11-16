@@ -162,7 +162,24 @@ Home Assistant traps that cost real time:
 - Unsupported here: `getAlarmConfig` (-40210), `getEvents` (-71114). The motion
   entity therefore reports the setting, not live motion.
 
-## 7. Verify in Home Assistant
+## 7. Give it a dashboard
+
+The camera also needs its own sidebar dashboard - otherwise it only shows up as
+an entity card under the auto-generated Security dashboard, with no PTZ
+controls, and the user will report "I don't see any PTZ controls".
+
+`docker/homeassistant/lovelace.tapo_camera.json` is the source of truth for a
+`/tapo-camera` dashboard (live feed + 5-button PTZ overlay + quick controls);
+`apply-dashboard.sh <slug>` pushes it through HA's websocket API, creating the
+sidebar registration and fixing the title/icon if they drift. The overlay
+toggle needs `input_boolean.tapo_ptz_controls_visible` in
+`configuration.yaml` - add it before the dashboard, or the toggle card is dead.
+
+PTZ overlay differs from iCSee's on purpose: 5 buttons (up/down/left/right +
+calibrate), because the C200 has no optical zoom, no diagonal move, and no
+continuous-motion `stop` - a press is a fixed step, so nothing needs stopping.
+
+## 8. Verify in Home Assistant
 
 ```bash
 # stills must be real JPEGs, with the camera's OSD clock burnt in
