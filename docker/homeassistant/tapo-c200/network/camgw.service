@@ -1,0 +1,14 @@
+[Unit]
+Description=Gateway policy for the Tapo C200 (NTP only, no internet)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# "-" prefix: a stale table on restart is normal, not an error
+ExecStartPre=-/usr/sbin/nft delete table ip camgw
+ExecStart=/usr/sbin/nft -f /etc/camgw.nft
+
+[Install]
+WantedBy=multi-user.target

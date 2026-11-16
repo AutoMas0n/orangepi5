@@ -1,0 +1,23 @@
+# Gateway policy for one device: NTP only, no internet.
+#
+# Applied by camgw.service. Deliberately NOT loaded from /etc/nftables.conf,
+# whose first line is `flush ruleset` - that would wipe Docker's rules.
+#
+# Works because Pi-hole's DHCP hands this device the Pi as its gateway
+# (dhcp-option=tag:cam,3,192.168.2.222). The device's internet traffic then
+# arrives here instead of at the router and is rejected.
+table ip camgw {
+	chain fwdfilter {
+		type filter hook forward priority filter; policy accept;
+		# time is the one service a camera genuinely needs from off-LAN
+		ip saddr 192.168.2.57 udp dport 123 counter accept
+		# everything else is dropped; counted so attempts are visible
+		ip saddr 192.168.2.57 counter reject
+	}
+
+	chain postnat {
+		type nat hook postrouting priority srcnat; policy accept;
+		# reply path for the accepted NTP traffic
+		ip saddr 192.168.2.57 udp dport 123 counter masquerade
+	}
+}

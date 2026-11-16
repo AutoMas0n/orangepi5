@@ -1,0 +1,153 @@
+#!/bin/bash
+# offline-device - give one device LAN access but no internet, via the Pi-hole.
+#
+# Usage (on the Pi, or over ssh):
+#   offline-device add <mac> <ip> <hostname>   LAN only, plus NTP
+#   offline-device remove <mac>                Restore normal internet access
+#   offline-device status                      Show the rules and hit counters
+#
+# Why not just block DNS: a device that has a real gateway can reach the
+# internet by raw IP and use any resolver it likes. A DNS block is advisory.
+# Removing the gateway is not - but a device with no gateway at all also loses
+# NTP, and a camera with a dead clock stamps every recording 2026-07-09 (its
+# firmware build date). So the Pi becomes the device's gateway and forwards
+# only NTP. Everything else is rejected here, and counted.
+#
+# One device per install: the nft table hard-codes a single source address.
+set -euo pipefail
+
+TABLE=camgw
+PI_IP="${PI_IP:-192.168.2.222}"
+NFTCONF=/etc/camgw.nft
+UNIT=/etc/systemd/system/camgw.service
+
+die() { printf 'offline-device: %s\n' "$*" >&2; exit 1; }
+norm_mac() { tr 'A-F' 'a-f' <<<"${1//-/:}"; }
+
+write_table() {
+  local ip="$1"
+  sudo tee "$NFTCONF" >/dev/null <<EOF
+table ip $TABLE {
+	chain fwdfilter {
+		type filter hook forward priority filter; policy accept;
+		ip saddr $ip udp dport 123 counter accept
+		ip saddr $ip counter reject
+	}
+	chain postnat {
+		type nat hook postrouting priority srcnat; policy accept;
+		ip saddr $ip udp dport 123 counter masquerade
+	}
+}
+EOF
+  sudo nft -c -f "$NFTCONF" || die "nft rejected the generated rules"
+}
+
+install_unit() {
+  sudo tee "$UNIT" >/dev/null <<EOF
+[Unit]
+Description=Gateway policy for an offline device (NTP only, no internet)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/sbin/nft delete table ip $TABLE
+ExecStart=/usr/sbin/nft -f $NFTCONF
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  sudo systemctl daemon-reload
+  sudo systemctl enable "$TABLE.service" >/dev/null 2>&1
+  sudo systemctl restart "$TABLE.service"
+}
+
+# Replace this MAC's dhcp.hosts entry, keeping every other lease.
+set_dhcp_host() {
+  local mac="$1" ip="$2" host="$3" cur out
+  cur="$(sudo pihole-FTL --config dhcp.hosts)"
+  out="$(python3 -c '
+import shlex, sys
+mac, ip, host, cur = sys.argv[1:5]
+keep = [e for e in shlex.split(cur.strip().strip("[]"))
+        if not e.lower().startswith(mac)]
+keep.append("%s,set:cam,%s,%s" % (mac, ip, host))
+print("[" + ", ".join(chr(34) + e + chr(34) for e in keep) + "]")
+' "$mac" "$ip" "$host" "$cur")"
+  sudo pihole-FTL --config dhcp.hosts "$out"
+}
+
+# Add or drop the gateway/NTP options for tag "cam".
+set_dhcp_options() {
+  local mode="$1" cur out
+  cur="$(sudo pihole-FTL --config misc.dnsmasq_lines)"
+  out="$(python3 -c '
+import shlex, sys
+mode, pi_ip, cur = sys.argv[1:4]
+cur = shlex.split(cur.strip().strip("[]"))
+drop = ("dhcp-option=tag:cam,3", "dhcp-option=tag:cam,42")
+keep = [e for e in cur if not e.startswith(drop)]
+if mode == "add":
+    keep += ["dhcp-option=tag:cam,3,%s" % pi_ip,
+             "dhcp-option=tag:cam,42,%s" % pi_ip]
+print("[" + ", ".join(chr(34) + e + chr(34) for e in keep) + "]")
+' "$mode" "$PI_IP" "$cur")"
+  sudo pihole-FTL --config misc.dnsmasq_lines "$out"
+}
+
+# Drop this MAC's dhcp.hosts entry.
+drop_dhcp_host() {
+  local mac="$1" cur out
+  cur="$(sudo pihole-FTL --config dhcp.hosts)"
+  out="$(python3 -c '
+import shlex, sys
+mac, cur = sys.argv[1], sys.argv[2]
+keep = [e for e in shlex.split(cur.strip().strip("[]"))
+        if not e.lower().startswith(mac)]
+print("[" + ", ".join(chr(34) + e + chr(34) for e in keep) + "]")
+' "$mac" "$cur")"
+  sudo pihole-FTL --config dhcp.hosts "$out"
+}
+
+cmd_add() {
+  local mac ip host
+  mac="$(norm_mac "$1")"; ip="$2"; host="$3"
+  [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || die "not an IPv4 address: $ip"
+
+  set_dhcp_host "$mac" "$ip" "$host"
+  set_dhcp_options add
+  write_table "$ip"
+  install_unit
+  sudo sysctl -qw net.ipv4.ip_forward=1
+  printf 'net.ipv4.ip_forward=1\n' |
+    sudo tee /etc/sysctl.d/99-offline-device.conf >/dev/null
+
+  echo "Done: $mac -> $ip ($host). LAN yes, internet no, NTP from $PI_IP."
+  echo "The device must renew its DHCP lease (reboot it) to take the new gateway."
+}
+
+cmd_remove() {
+  local mac; mac="$(norm_mac "$1")"
+  sudo systemctl disable --now "$TABLE.service" >/dev/null 2>&1 || true
+  sudo nft delete table ip "$TABLE" 2>/dev/null || true
+  sudo rm -f "$NFTCONF" "$UNIT" /etc/sysctl.d/99-offline-device.conf
+  sudo systemctl daemon-reload
+  drop_dhcp_host "$mac"
+  set_dhcp_options remove
+  sudo sysctl -qw net.ipv4.ip_forward=0
+  echo "Removed: $mac gets normal internet again after its next DHCP renewal."
+}
+
+cmd_status() {
+  echo "== rules:"; sudo nft list table ip "$TABLE" 2>/dev/null || echo "  (none)"
+  echo "== unit: $(systemctl is-active "$TABLE.service" 2>/dev/null || echo unknown)"
+  echo "== forwarding: $(cat /proc/sys/net/ipv4/ip_forward)"
+}
+
+case "${1:-}" in
+  add)    shift; [[ $# -eq 3 ]] || die "usage: offline-device add <mac> <ip> <hostname>"; cmd_add "$@" ;;
+  remove) shift; [[ $# -eq 1 ]] || die "usage: offline-device remove <mac>"; cmd_remove "$@" ;;
+  status) cmd_status ;;
+  *) sed -n '2,19p' "$0"; exit 2 ;;
+esac

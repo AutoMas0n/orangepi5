@@ -97,10 +97,36 @@ deny-domain add tplinknbu.com      # on the Pi, from the pihole-local-dns repo
 static-lease add a8:29:dc:ab:b5:50 192.168.2.57 C200
 ```
 
-Be honest with the user: this is **not** airtight. The router is itself a
-working resolver, `8.8.8.8` is reachable from the LAN, and the Pi is not the
-gateway (no `ip_forward`, no nftables). Airtight needs a gateway-side WAN deny or
-an IoT VLAN with no default gateway.
+DNS blocking alone is **not** airtight: the router is itself a working resolver,
+`8.8.8.8` is reachable from the LAN, and a device with a real gateway can fetch
+by raw IP. Proven the hard way - this camera **auto-upgraded its firmware while
+every TP-Link domain was NXDOMAIN**.
+
+### 4b. Actually off the internet: take the gateway away
+
+`offline-device add <mac> <ip> <host>` (from the pihole-local-dns repo, lives in
+`docker/homeassistant/tapo-c200/network/` here) makes the Pi the device's
+gateway and forwards **only NTP**, rejecting and counting everything else:
+
+1. DHCP tag `dhcp-option=tag:cam,3,<pi-ip>` + option 42 for NTP
+2. `camgw.nft` - `udp/123` accept, everything else `counter reject`
+3. `camgw.service` - separate unit, because `/etc/nftables.conf` begins with
+   `flush ruleset` and enabling *that* unit wipes Docker's rules
+
+Two traps, both hit for real:
+
+- **A no-gateway device loses NTP and stamps everything with its firmware build
+  date** (this one sat at `2026-07-09 08:42`, the build date, with clock drift
+  in every OSD timestamp). The camera cannot be told an NTP server -
+  `getNtpConfig`/`setNtpServer` do not exist on 1.4.6. Forwarding port 123 is the
+  fix, and is why this is not simply "no default gateway".
+- **Never** hijack `pool.ntp.org` in `address=/` lines: the Pi's own NTP client
+  uses it, and FTL then refuses to serve time (`Failed to receive data from NTP
+  server pool.ntp.org (192.168.2.222)`, then "retrying in 600 seconds"). It broke
+  itself within seconds when I tried it.
+
+The tag only takes effect after the device **renews its lease** - reboot it, or
+the block silently does nothing while looking configured.
 
 ## 5. Home Assistant
 
@@ -209,6 +235,29 @@ Home Assistant traps that cost real time:
 - Unsupported here: `getAlarmConfig` (-40210), `getEvents` (-71114). The motion
   entity therefore reports the setting, not live motion.
 
+## 6b. Move it to another Wi-Fi network
+
+No app, no account. `network/migrate-wifi.py` uses the same calls the app does:
+`scanApList` returns the visible APs **and the camera's RSA public key**, then
+`connectAp` takes the chosen AP entry with the PSK RSA-encrypted (`unique_key:
+1`). Works on a provisioned camera - `scanApList` is not gated.
+
+```bash
+python3 network/migrate-wifi.py --host IP --password PW --list
+python3 network/migrate-wifi.py --host IP --password PW --ssid S --psk P --dry-run
+python3 network/migrate-wifi.py --host IP --password PW --ssid S --psk P
+```
+
+**Always `--dry-run` first.** A wrong SSID/PSK drops the camera off its network
+with nothing to join; it falls back to its setup AP (`Tapo_Cam_XXXX`), so
+recovery means joining that from a laptop and re-running - or pressing reset.
+The 2.4 GHz-only limitation matters here: a 5 GHz-only SSID never appears in the
+scan, and a hidden SSID does not either.
+
+Afterwards the camera is unreachable on the old network: find it with `hunt.sh`
+or the new network's DHCP lease table by MAC, then re-pin the lease there and
+update the HA config entry if the address changed.
+
 ## 7. Give it a dashboard
 
 The camera also needs its own sidebar dashboard - otherwise it only shows up as
@@ -272,3 +321,10 @@ answer "already at the end of its travel" (correct behaviour, not a bug).
   with `cp`, or `mv` aside to a timestamped path.
 - Never touch `custom_components/icsee_ptz` - a separate camera, patched
   locally, that must keep working.
+- Never enable `nftables.service` on the Pi: `/etc/nftables.conf` opens with
+  `flush ruleset`, which wipes Docker's rules (and Docker runs HA there). Use a
+  scoped unit that owns one table, as `camgw.service` does.
+- Never run the live `connectAp` Wi-Fi switch without a `--dry-run` first and the
+  user's go-ahead - it is the one step that can strand the camera.
+- Never claim a DNS block stops cloud traffic. It did not stop a firmware
+  upgrade here; only the gateway policy did.

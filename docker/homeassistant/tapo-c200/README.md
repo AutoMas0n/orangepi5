@@ -187,6 +187,92 @@ This is the part pytapo does not document, and it is why the stock
   motion entity reports the *setting*, not live motion - real motion triggers
   need ONVIF events or the camera's own recordings.
 
+## Keeping it off the internet (and still telling the time)
+
+A DNS block alone does not do this. This camera **upgraded its own firmware
+while every TP-Link domain was NXDOMAIN**, because it had a real gateway and
+could resolve or reach things through `192.168.2.1`. DNS blocking is advisory;
+taking the gateway away is not.
+
+But a device with no gateway has no NTP either, and this camera has **no
+way to be told its NTP server**: `getNtpConfig`/`setNtpServer` do not exist on
+1.4.6. Left alone it falls back to its firmware build time - it sat at
+`2026-07-09 08:42` (build date) with every OSD timestamp and recording date
+wrong.
+
+So: **the Pi becomes the camera's gateway and forwards only NTP.**
+
+```bash
+ssh pi@192.168.2.222 'offline-device add a8:29:dc:ab:b5:50 192.168.2.57 C200'
+ssh pi@192.168.2.222 'offline-device status'   # rules + hit counters
+```
+
+Three pieces, all in `network/`:
+
+1. Pi-hole DHCP tags this MAC (`dhcp-option=tag:cam,3,192.168.2.222`) so the
+   camera is offered the Pi as its gateway, and option 42 points NTP there too.
+2. `network/camgw.nft` forwards `udp/123` and **rejects everything else**, with
+   counters - so attempts are visible rather than silent.
+3. `network/camgw.service` re-applies the rules at boot. It is a separate unit
+   on purpose: `/etc/nftables.conf` starts with `flush ruleset`, and enabling
+   that service would wipe Docker's rules on the Pi.
+
+Also set `auto_upgrade.common.enabled = off` (see below) - defence in depth,
+not a substitute.
+
+**After adding the tag the camera must renew its lease** (reboot it) before it
+uses the new gateway - otherwise it keeps the router and the block does nothing.
+
+Verify it took effect:
+
+```bash
+ssh pi@192.168.2.222 'offline-device status'          # reject counter climbing
+# camera clock should match the host, not the build date:
+#   camera: 2026-11-16 16:41   host: 2026-11-16 11:41 (EST)
+```
+
+Remove with `offline-device remove <mac>` - restores the router gateway and
+deletes the nft table and unit.
+
+## Moving the camera to another Wi-Fi network
+
+No app and no Tapo account needed. The camera stays provisioned: the admin
+password, third account (RTSP), presets and timezone all move with it.
+
+```bash
+# 1. What can it see? (2.4 GHz only - the C200 has no 5 GHz radio)
+python3 network/migrate-wifi.py --host 192.168.2.57 --password PW --list
+
+# 2. Prove the SSID and PSK without committing
+python3 network/migrate-wifi.py --host 192.168.2.57 --password PW \
+        --ssid NEW --psk PSK --dry-run
+
+# 3. Switch
+python3 network/migrate-wifi.py --host 192.168.2.57 --password PW \
+        --ssid NEW --psk PSK
+```
+
+Run it from anywhere with `pytapo` + `cryptography` - the HA container already
+has both (`docker exec homeassistant python3 /tmp/migrate-wifi.py …`).
+
+How it works: `scanApList` returns the visible networks **and the camera's RSA
+public key**; `connectAp` takes the chosen AP entry with the PSK RSA-encrypted
+(`unique_key: 1`). Same call the phone app uses during setup, and it still works
+once the camera is provisioned.
+
+**Use `--dry-run` first.** A wrong SSID or PSK sends the camera off the old
+network with nowhere to go; it then falls back to its own setup AP
+(`Tapo_Cam_B550`), so recovery means joining that from a laptop and re-running
+the script - or pressing reset, which is the thing to avoid.
+
+Afterwards: find it on the new network (`hunt.sh`, or the DHCP lease table by
+MAC), then update the static lease on that network's DHCP server and the Home
+Assistant entry if the IP changed (the integration stores the host address).
+
+Not yet exercised end-to-end here: the final `connectAp` was verified only up to
+`--dry-run` against a live AP. The scan, target selection, RSA encryption and
+the whole argument path are proven.
+
 ## Verify
 
     # entities exist
